@@ -14,13 +14,12 @@ RUN npm ci
 
 COPY client/ ./
 
-# Do not ENV-map Coolify's VITE_API_BASE_URL build-arg — it auto-fills UI FQDN and breaks combined images.
+# Do not ENV-map Coolify's VITE_API_BASE_URL — it often points at the wrong host and breaks same-origin SPA+API.
 # Same-origin UI+API: omit SPA_API_BASE_URL (recommended for this Dockerfile).
-# Split subdomain: in Coolify add custom build-arg SPA_API_BASE_URL=https://your-api.example.com
+# Split subdomain: in Coolify set build-arg SPA_API_BASE_URL=https://your-api.example.com (not VITE_API_BASE_URL).
 ARG SPA_API_BASE_URL=
-ENV VITE_API_BASE_URL=${SPA_API_BASE_URL}
-
-RUN npm run build
+# Set VITE only for this RUN so stray build-time ENV from the host cannot overwrite the SPA base URL.
+RUN export VITE_API_BASE_URL="${SPA_API_BASE_URL}" && npm run build
 
 # -----------------------------------------------------------------------------
 # Stage 2: PHP-FPM + Nginx (PHP 8.4+ required by Symfony 8 / current composer.lock)
