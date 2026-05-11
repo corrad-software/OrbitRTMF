@@ -14,6 +14,8 @@ import type {
   RtmfModule,
   RtmfSnapshotStatus,
   RtmfSubModule,
+  RtmfUrlPath,
+  RtmfUrlPathInput,
 } from "@/types";
 
 // ── Dashboard ──
@@ -207,4 +209,41 @@ export async function updateRtmfScenarioRow(frontendId: number, groupId: number,
 }
 export async function deleteRtmfScenarioRow(frontendId: number, groupId: number, rowId: number) {
   return apiRequest<{ data: { success: boolean } }>(`/api/rtmf-frontends/${frontendId}/scenario-groups/${groupId}/rows/${rowId}`, { method: "DELETE" });
+}
+
+// ── URL Paths ──
+export async function listRtmfUrlPaths(params = "") {
+  return apiRequest<{ data: RtmfUrlPath[]; meta: Record<string, unknown> }>(
+    `/api/rtmf-url-paths${params}`,
+  );
+}
+
+export async function getRtmfUrlPath(id: number) {
+  return apiRequest<{ data: RtmfUrlPath }>(`/api/rtmf-url-paths/${id}`);
+}
+
+export async function createRtmfUrlPath(input: RtmfUrlPathInput) {
+  return apiRequest<{ data: RtmfUrlPath }>("/api/rtmf-url-paths", {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function updateRtmfUrlPath(id: number, input: Partial<RtmfUrlPathInput>) {
+  return apiRequest<{ data: RtmfUrlPath }>(`/api/rtmf-url-paths/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(input),
+  });
+}
+
+export async function deleteRtmfUrlPath(id: number) {
+  return apiRequest<{ data: { success: boolean } }>(`/api/rtmf-url-paths/${id}`, {
+    method: "DELETE",
+  });
+}
+
+export async function captureRtmfUrlPathSnapshot(id: number) {
+  return apiRequest<{ data: RtmfUrlPath }>(`/api/rtmf-url-paths/${id}/snapshot`, {
+    method: "POST",
+  });
 }

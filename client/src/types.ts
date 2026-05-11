@@ -152,6 +152,9 @@ export type RtmfFrontendInput = {
   isDone?: boolean;
   vuePath?: string | null;
   liveUrl?: string | null;
+  urlDev?: string | null;
+  urlStg?: string | null;
+  urlPrd?: string | null;
   tabCode?: string | null;
   title: string;
   businessRequirement?: string | null;
@@ -180,6 +183,28 @@ export type RtmfFrontend = RtmfFrontendInput & {
   linksTo?: RtmfFrontendLink[];
   snapshotStatus?: RtmfSnapshotStatus;
   snapshotCapturedAt?: string | null;
+};
+
+export type RtmfUrlPathInput = {
+  vuePath?: string | null;
+  liveUrl?: string | null;
+  description?: string | null;
+};
+
+export type RtmfUrlPath = {
+  id: number;
+  vuePath: string | null;
+  liveUrl: string | null;
+  description: string | null;
+  lineCount: number | null;
+  fileSizeKb: number | null;
+  sharedComponents?: unknown[] | null;
+  snapshotHtml?: string | null;
+  snapshotStatus: RtmfSnapshotStatus;
+  snapshotCapturedAt: string | null;
+  frontendsCount?: number;
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type ThemeColor = "violet" | "blue" | "green" | "red" | "black-white" | "grey";
