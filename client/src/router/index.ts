@@ -12,6 +12,15 @@ import PageEditorView from "@/views/PageEditorView.vue";
 import PagesListView from "@/views/PagesListView.vue";
 import PostEditorView from "@/views/PostEditorView.vue";
 import PostsListView from "@/views/PostsListView.vue";
+import RtmfDashboardView from "@/views/RtmfDashboardView.vue";
+import RtmfEditorView from "@/views/RtmfEditorView.vue";
+import RtmfListView from "@/views/RtmfListView.vue";
+import RtmfModulesListView from "@/views/RtmfModulesListView.vue";
+import RtmfModuleEditorView from "@/views/RtmfModuleEditorView.vue";
+import RtmfActorsListView from "@/views/RtmfActorsListView.vue";
+import RtmfActorEditorView from "@/views/RtmfActorEditorView.vue";
+import RtmfExportView from "@/views/RtmfExportView.vue";
+
 import CategoriesListView from "@/views/CategoriesListView.vue";
 import CategoryEditorView from "@/views/CategoryEditorView.vue";
 import DatabaseSchemaView from "@/views/DatabaseSchemaView.vue";
@@ -96,6 +105,22 @@ const router = createRouter({
     { path: "/admin/storefront-menu", redirect: "/admin/webfront-menu" },
     { path: "/admin/webfront-settings", name: "webfront-settings", component: WebfrontSettingsView, meta: { requiresAuth: true, title: "Settings" } },
     { path: "/admin/menus", name: "menus", component: MenusView, meta: { requiresAuth: true, title: "Menus" } },
+    { path: "/admin/rtmf", redirect: "/admin/rtmf/dashboard" },
+    { path: "/admin/rtmf/dashboard", name: "rtmf-dashboard", component: RtmfDashboardView, meta: { requiresAuth: true, title: "Page Catalog Dashboard" } },
+    { path: "/admin/rtmf/frontends", name: "rtmf-frontends", component: RtmfListView, meta: { requiresAuth: true, title: "Pages" } },
+    { path: "/admin/rtmf/frontends/new", name: "rtmf-frontend-create", component: RtmfEditorView, meta: { requiresAuth: true, title: "New Page" } },
+    { path: "/admin/rtmf/frontends/:id", name: "rtmf-frontend-edit", component: RtmfEditorView, meta: { requiresAuth: true, title: "Edit Page" } },
+    { path: "/admin/rtmf/modules", name: "rtmf-modules", component: RtmfModulesListView, meta: { requiresAuth: true, title: "Modules" } },
+    { path: "/admin/rtmf/modules/new", name: "rtmf-module-create", component: RtmfModuleEditorView, meta: { requiresAuth: true, title: "New Module" } },
+    { path: "/admin/rtmf/modules/:id", name: "rtmf-module-edit", component: RtmfModuleEditorView, meta: { requiresAuth: true, title: "Edit Module" } },
+    { path: "/admin/rtmf/actors", name: "rtmf-actors", component: RtmfActorsListView, meta: { requiresAuth: true, title: "Actors" } },
+    { path: "/admin/rtmf/actors/new", name: "rtmf-actor-create", component: RtmfActorEditorView, meta: { requiresAuth: true, title: "New Actor" } },
+    { path: "/admin/rtmf/actors/:id", name: "rtmf-actor-edit", component: RtmfActorEditorView, meta: { requiresAuth: true, title: "Edit Actor" } },
+    { path: "/admin/rtmf/export", name: "rtmf-export", component: RtmfExportView, meta: { requiresAuth: true, title: "Export" } },
+
+    { path: "/admin/rtmf-frontends", redirect: "/admin/rtmf/frontends" },
+    { path: "/admin/rtmf-frontends/new", redirect: "/admin/rtmf/frontends/new" },
+    { path: "/admin/rtmf-frontends/:id", redirect: (to: RouteLocationGeneric) => `/admin/rtmf/frontends/${String(to.params.id ?? "")}` },
     { path: "/admin/kitchen-sink", name: "kitchen-sink", component: KitchenSinkView, meta: { requiresAuth: true, title: "Kitchen Sink" } },
     { path: "/admin/kitchen-sink/forms", name: "kitchen-forms", component: KitchenFormsView, meta: { requiresAuth: true, title: "Forms" } },
     { path: "/admin/kitchen-sink/charts", name: "kitchen-charts", component: KitchenChartsView, meta: { requiresAuth: true, title: "Charts" } },
@@ -210,6 +235,19 @@ router.beforeEach(async (to) => {
 
   if (to.meta.guestOnly && auth.isAuthenticated) {
     return { name: "main-dashboard" };
+  }
+
+  if (auth.isTester) {
+    const path = to.path;
+    const isRtmfRoute = path.startsWith("/admin/rtmf");
+    const isNewRoute = path.endsWith("/new");
+
+    if (!isRtmfRoute) {
+      return { name: "rtmf-dashboard" };
+    }
+    if (isNewRoute) {
+      return { name: "rtmf-frontends" };
+    }
   }
 
   return true;

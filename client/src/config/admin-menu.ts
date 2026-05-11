@@ -1,21 +1,27 @@
 import type { Component } from "vue";
 import {
+  AppWindow,
   BookOpen,
   Bot,
   Cable,
   Cog,
   Database,
   Eye,
+  FileSpreadsheet,
   FileText,
   Gauge,
   Image,
+  LayoutDashboard,
   LayoutGrid,
+  Layers,
   Link2,
   ListChecks,
   Mail,
   Menu,
+  PieChart,
   Settings,
   Shield,
+  Users,
 } from "lucide-vue-next";
 
 export type MenuNode = {
@@ -89,6 +95,17 @@ export const DEFAULT_MENU: MenuGroupDef[] = [
       },
       { id: "storefront-menu", label: "Menus", to: "/admin/webfront-menu", icon: Link2 },
       { id: "webfront-settings", label: "Settings", to: "/admin/webfront-settings", icon: Settings },
+    ],
+  },
+  {
+    id: "rtmf",
+    label: "Page Catalog",
+    items: [
+      { id: "rtmf-dashboard", label: "Dashboard", to: "/admin/rtmf/dashboard", icon: LayoutDashboard },
+      { id: "rtmf-frontends", label: "Pages", to: "/admin/rtmf/frontends", icon: AppWindow },
+      { id: "rtmf-modules", label: "Module", to: "/admin/rtmf/modules", icon: Layers },
+      { id: "rtmf-actors", label: "Actor", to: "/admin/rtmf/actors", icon: Users },
+      { id: "rtmf-export", label: "Export", to: "/admin/rtmf/export", icon: FileSpreadsheet },
     ],
   },
   {

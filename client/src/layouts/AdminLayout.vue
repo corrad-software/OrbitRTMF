@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { Bell, Check, ChevronDown, LogOut, Settings, Shield } from "lucide-vue-next";
+import { Bell, Check, ChevronDown, LogOut, MessageCircle, Send, Settings, Shield } from "lucide-vue-next";
 
 import type { ThemeColor } from "@/types";
 import type { MenuItemDef, MenuNode } from "@/config/admin-menu";
@@ -27,6 +27,24 @@ const { isCollapsed, isCompact, toggle: toggleSidebar, toggleCompact } = useSide
 const settingsOpen = ref(false);
 const settingsDropdownRef = ref<HTMLElement | null>(null);
 
+const chatOpen = ref(false);
+const chatDropdownRef = ref<HTMLElement | null>(null);
+const chatMessage = ref("");
+const chatMessages = ref<Array<{ id: number; from: "user" | "admin"; text: string; time: string }>>([]);
+let chatIdCounter = 0;
+
+function sendChatMessage() {
+  const text = chatMessage.value.trim();
+  if (!text) return;
+  chatMessages.value.push({
+    id: ++chatIdCounter,
+    from: "user",
+    text,
+    time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+  });
+  chatMessage.value = "";
+}
+
 const themeChoices: Array<{ label: string; value: ThemeColor }> = [
   { label: "Violet", value: "violet" },
   { label: "Blue", value: "blue" },
@@ -37,14 +55,19 @@ const themeChoices: Array<{ label: string; value: ThemeColor }> = [
 ];
 
 const handleDocumentClick = (event: MouseEvent) => {
-  if (!settingsOpen.value) return;
-  if (!settingsDropdownRef.value) return;
-  if (settingsDropdownRef.value.contains(event.target as Node)) return;
-  settingsOpen.value = false;
+  if (settingsOpen.value && settingsDropdownRef.value && !settingsDropdownRef.value.contains(event.target as Node)) {
+    settingsOpen.value = false;
+  }
+  if (chatOpen.value && chatDropdownRef.value && !chatDropdownRef.value.contains(event.target as Node)) {
+    chatOpen.value = false;
+  }
 };
 
 const handleEscape = (event: KeyboardEvent) => {
-  if (event.key === "Escape") settingsOpen.value = false;
+  if (event.key === "Escape") {
+    settingsOpen.value = false;
+    chatOpen.value = false;
+  }
 };
 
 function resolveUrl(url: string) {
@@ -63,10 +86,6 @@ onMounted(() => {
 onBeforeUnmount(() => {
   document.removeEventListener("click", handleDocumentClick);
   document.removeEventListener("keydown", handleEscape);
-  if (showTitleTimer !== null) {
-    window.clearTimeout(showTitleTimer);
-    showTitleTimer = null;
-  }
 });
 
 const openMenus = reactive<Record<string, boolean>>({});
@@ -82,6 +101,13 @@ const userInitials = computed(() => {
 });
 
 const userRoleLabel = computed(() => auth.user?.role || "Administrator");
+
+const TESTER_ALLOWED_GROUPS = new Set(["dashboard", "rtmf"]);
+const visibleMenu = computed(() =>
+  auth.isTester
+    ? menuStore.resolvedMenu.filter((g) => TESTER_ALLOWED_GROUPS.has(g.id))
+    : menuStore.resolvedMenu,
+);
 const HEADER_TEXT_MAX = 20;
 
 function truncateHeaderText(value: string, max = HEADER_TEXT_MAX) {
@@ -92,10 +118,6 @@ function truncateHeaderText(value: string, max = HEADER_TEXT_MAX) {
 const headerSiteTitle = computed(() => truncateHeaderText(site.siteTitle || ""));
 const headerUserName = computed(() => truncateHeaderText(auth.user?.name || "Admin"));
 const headerUserRole = computed(() => truncateHeaderText(userRoleLabel.value));
-const hasActiveToast = computed(() => toast.toasts.value.length > 0);
-const showSiteTitle = ref(true);
-const TOAST_EXIT_MS = 1500;
-let showTitleTimer: number | null = null;
 
 const rowBaseClass = computed(() =>
   isCompact.value
@@ -162,7 +184,7 @@ function syncOpenMenus() {
     }
   };
 
-  for (const group of menuStore.resolvedMenu) {
+  for (const group of visibleMenu.value) {
     for (const item of group.items) {
       syncNode(item);
     }
@@ -170,50 +192,33 @@ function syncOpenMenus() {
 }
 
 watch(() => route.path, syncOpenMenus, { immediate: true });
-watch(() => menuStore.resolvedMenu, syncOpenMenus, { deep: true });
-watch(
-  hasActiveToast,
-  (active) => {
-    if (showTitleTimer !== null) {
-      window.clearTimeout(showTitleTimer);
-      showTitleTimer = null;
-    }
-    if (active) {
-      showSiteTitle.value = false;
-      return;
-    }
-    showTitleTimer = window.setTimeout(() => {
-      showSiteTitle.value = true;
-      showTitleTimer = null;
-    }, TOAST_EXIT_MS);
-  },
-  { immediate: true },
-);
+watch(() => visibleMenu.value, syncOpenMenus, { deep: true });
 </script>
 
 <template>
   <div class="min-h-screen bg-[#f8f9fb]">
     <header class="sticky top-0 z-40 flex h-10 items-center justify-between border-b border-slate-200 bg-white px-5">
       <div class="flex items-center gap-1">
-        <div v-if="site.siteIconUrl" class="flex h-[18px] shrink-0 items-center justify-center overflow-hidden">
+        <div v-if="site.siteIconUrl" class="flex h-[20px] shrink-0 items-center justify-center overflow-hidden">
           <img :src="resolveUrl(site.siteIconUrl)" alt="Site icon" class="h-full w-auto object-contain" />
         </div>
         <div
           v-else
-          class="flex h-[18px] w-[18px] shrink-0 items-center justify-center rounded-md bg-gradient-to-br from-[var(--accent-600)] to-[var(--accent-500)]"
+          class="flex h-[20px] w-[20px] shrink-0 items-center justify-center rounded-md bg-gradient-to-br from-[var(--accent-600)] to-[var(--accent-500)]"
         >
-          <Shield class="h-[11px] w-[11px] text-white" />
+          <Shield class="h-[17px] w-[17px] text-white" />
         </div>
       </div>
 
       <div class="flex items-center self-stretch">
         <div
-          v-if="site.siteTitle && showSiteTitle"
+          v-if="site.siteTitle"
           class="flex h-full items-center overflow-hidden whitespace-nowrap"
         >
           <span class="px-4 text-sm font-light text-slate-900">{{ headerSiteTitle }}</span>
           <span class="h-full w-px bg-slate-200" />
         </div>
+
         <AppToastRegion />
 
         <router-link
@@ -231,6 +236,66 @@ watch(
           </div>
           <span class="pointer-events-none absolute -bottom-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md bg-slate-900 px-2 py-1 text-xs text-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100">Profile</span>
         </router-link>
+
+        <span class="h-full w-px bg-slate-200" />
+
+        <div ref="chatDropdownRef" class="relative flex h-full items-stretch">
+          <button
+            class="group relative flex h-full items-center px-4 text-slate-500 transition-colors hover:bg-[var(--accent-600)] hover:text-white"
+            @click.stop="chatOpen = !chatOpen"
+          >
+            <MessageCircle class="h-4 w-4" />
+            <span class="pointer-events-none absolute -bottom-8 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-md bg-slate-900 px-2 py-1 text-xs text-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100">Chat</span>
+          </button>
+
+          <div
+            v-if="chatOpen"
+            class="absolute right-0 top-full z-50 mt-2 flex h-96 w-80 flex-col rounded-lg border border-slate-200 bg-white shadow-lg"
+          >
+            <div class="flex items-center justify-between border-b border-slate-200 px-4 py-2.5">
+              <p class="text-sm font-semibold text-slate-700">Chat</p>
+              <button class="text-slate-400 transition-colors hover:text-slate-600" @click="chatOpen = false">&times;</button>
+            </div>
+
+            <div class="flex-1 space-y-3 overflow-y-auto px-4 py-3">
+              <div v-if="chatMessages.length === 0" class="flex h-full items-center justify-center">
+                <p class="text-xs text-slate-400">No messages yet</p>
+              </div>
+              <div
+                v-for="msg in chatMessages"
+                :key="msg.id"
+                class="flex"
+                :class="msg.from === 'user' ? 'justify-end' : 'justify-start'"
+              >
+                <div
+                  class="max-w-[75%] rounded-lg px-3 py-2 text-xs"
+                  :class="msg.from === 'user' ? 'bg-[var(--accent-600)] text-white' : 'bg-slate-100 text-slate-700'"
+                >
+                  <p>{{ msg.text }}</p>
+                  <p class="mt-1 text-[10px]" :class="msg.from === 'user' ? 'text-white/70' : 'text-slate-400'">{{ msg.time }}</p>
+                </div>
+              </div>
+            </div>
+
+            <div class="border-t border-slate-200 px-3 py-2.5">
+              <div class="flex items-center gap-2">
+                <input
+                  v-model="chatMessage"
+                  type="text"
+                  placeholder="Type a message..."
+                  class="flex-1 rounded-md border border-slate-200 px-3 py-1.5 text-xs text-slate-700 outline-none transition-colors focus:border-[var(--accent-400)] focus:ring-1 focus:ring-[var(--accent-400)]"
+                  @keydown.enter="sendChatMessage"
+                />
+                <button
+                  class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-[var(--accent-600)] text-white transition-colors hover:bg-[var(--accent-700)]"
+                  @click="sendChatMessage"
+                >
+                  <Send class="h-3.5 w-3.5" />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
 
         <span class="h-full w-px bg-slate-200" />
 
@@ -348,7 +413,7 @@ watch(
         </div>
 
         <nav class="flex-1 p-3" :class="isCollapsed ? 'md:overflow-visible md:px-0 md:py-2' : ''">
-          <div v-for="(group, gi) in menuStore.resolvedMenu" :key="group.id">
+          <div v-for="(group, gi) in visibleMenu" :key="group.id">
             <p
               v-if="group.label"
               class="px-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400"
@@ -476,5 +541,6 @@ watch(
         <slot />
       </main>
     </div>
+
   </div>
 </template>

@@ -54,7 +54,6 @@ function iconTone(variant: "success" | "error" | "info") {
               {{ latestToast.title }}<span v-if="latestToast.message" class="font-normal opacity-90"> - {{ latestToast.message }}</span>
             </p>
           </div>
-
         </div>
       </div>
     </Transition>

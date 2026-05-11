@@ -24,6 +24,18 @@ class RoleSeeder extends Seeder
                     'roles.view', 'roles.create', 'roles.edit', 'roles.delete',
                     'settings.view', 'settings.edit',
                     'menus.view', 'menus.edit',
+                    'audit.read',
+                    'rtmf.view', 'rtmf.manage',
+                ],
+            ]
+        );
+
+        Role::updateOrCreate(
+            ['name' => 'tester'],
+            [
+                'description' => 'Read-only access to RTMF',
+                'permissions' => [
+                    'rtmf.view',
                 ],
             ]
         );

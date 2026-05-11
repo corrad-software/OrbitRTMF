@@ -7,21 +7,24 @@ import {
   Trash2,
   CheckCircle2,
   XCircle,
+  Globe,
 } from "lucide-vue-next";
 
 import AdminLayout from "@/layouts/AdminLayout.vue";
-import { listUsers, deleteUser } from "@/api/cms";
+import { listUsers, deleteUser, listExternalUsers } from "@/api/cms";
 import { useConfirmDialog } from "@/composables/useConfirmDialog";
 import { useToast } from "@/composables/useToast";
-import type { UserDetail } from "@/types";
+import type { UserDetail, ExternalUser } from "@/types";
 
 const users = ref<UserDetail[]>([]);
+const externalUsers = ref<ExternalUser[]>([]);
 const confirmDialog = useConfirmDialog();
 const toast = useToast();
 
 async function load() {
-  const res = await listUsers();
-  users.value = res.data;
+  const [localRes, extRes] = await Promise.all([listUsers(), listExternalUsers()]);
+  users.value = localRes.data;
+  externalUsers.value = extRes.data;
 }
 
 async function remove(id: number) {
@@ -78,8 +81,14 @@ onMounted(load);
             </thead>
             <tbody class="divide-y divide-slate-100">
               <tr v-for="user in users" :key="user.id" class="transition-colors hover:bg-slate-50">
-                <td class="px-4 py-2 font-medium text-slate-900">
-                  <router-link :to="'/admin/settings/users/' + user.id" class="hover:text-violet-600">{{ user.name }}</router-link>
+                <td class="px-4 py-2">
+                  <router-link :to="'/admin/settings/users/' + user.id" class="flex items-center gap-2.5 hover:text-violet-600">
+                    <img v-if="user.photoUrl" :src="user.photoUrl" class="h-7 w-7 shrink-0 rounded-full object-cover" />
+                    <div v-else class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xs font-semibold text-slate-600">
+                      {{ user.name.charAt(0).toUpperCase() }}
+                    </div>
+                    <span class="font-medium text-slate-900">{{ user.name }}</span>
+                  </router-link>
                 </td>
                 <td class="px-4 py-2 text-slate-500">{{ user.email }}</td>
                 <td class="px-4 py-2">
@@ -108,6 +117,52 @@ onMounted(load);
               </tr>
               <tr v-if="users.length === 0">
                 <td colspan="5" class="px-4 py-6 text-center text-sm text-slate-400">No users found.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </article>
+
+      <!-- ───── External Users Table ───── -->
+      <article class="rounded-lg border border-slate-200 bg-white shadow-sm">
+        <div class="flex items-center gap-2 border-b border-slate-100 px-4 py-2.5">
+          <Globe class="h-4 w-4 text-amber-500" />
+          <h2 class="text-sm font-semibold text-slate-900">External Users</h2>
+          <span class="ml-auto rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-700">Read-only</span>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="border-b border-slate-100 text-left">
+                <th class="px-4 py-2 text-xs font-semibold uppercase tracking-wider text-slate-500">Name</th>
+                <th class="px-4 py-2 text-xs font-semibold uppercase tracking-wider text-slate-500">Email</th>
+                <th class="px-4 py-2 text-xs font-semibold uppercase tracking-wider text-slate-500">Role</th>
+                <th class="px-4 py-2 text-xs font-semibold uppercase tracking-wider text-slate-500">Source</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+              <tr v-for="user in externalUsers" :key="user.id" class="transition-colors hover:bg-slate-50">
+                <td class="px-4 py-2">
+                  <div class="flex items-center gap-2.5">
+                    <img v-if="user.avatarUrl" :src="user.avatarUrl" class="h-7 w-7 shrink-0 rounded-full object-cover" />
+                    <div v-else class="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-amber-100 text-xs font-semibold text-amber-700">
+                      {{ user.name.charAt(0).toUpperCase() }}
+                    </div>
+                    <span class="font-medium text-slate-900">{{ user.name }}</span>
+                  </div>
+                </td>
+                <td class="px-4 py-2 text-slate-500">{{ user.email }}</td>
+                <td class="px-4 py-2">
+                  <span class="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600">{{ user.role }}</span>
+                </td>
+                <td class="px-4 py-2">
+                  <span class="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-700">
+                    <Globe class="h-3 w-3" /> External
+                  </span>
+                </td>
+              </tr>
+              <tr v-if="externalUsers.length === 0">
+                <td colspan="4" class="px-4 py-6 text-center text-sm text-slate-400">No external users found.</td>
               </tr>
             </tbody>
           </table>

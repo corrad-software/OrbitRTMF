@@ -46,6 +46,19 @@ return [
             'sslmode' => env('DB_SSLMODE', 'prefer'),
         ],
 
+        'mysql_external' => [
+            'driver'    => 'mysql',
+            'host'      => env('EXTERNAL_DB_HOST', '43.217.187.42'),
+            'port'      => env('EXTERNAL_DB_PORT', '4151'),
+            'database'  => env('EXTERNAL_DB_DATABASE', 'testagent'),
+            'username'  => env('EXTERNAL_DB_USERNAME', 'kerisi'),
+            'password'  => env('EXTERNAL_DB_PASSWORD', 'kerisi123'),
+            'charset'   => 'utf8mb4',
+            'collation' => 'utf8mb4_unicode_ci',
+            'prefix'    => '',
+            'strict'    => false,
+        ],
+
     ],
 
     /*

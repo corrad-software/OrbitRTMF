@@ -14,6 +14,7 @@ import type {
   RoleInput,
   SettingsPayload,
   StorefrontMenuItem,
+  ExternalUser,
   UserDetail,
   UserInput,
 } from "@/types";
@@ -150,8 +151,8 @@ export async function getPublicPageBySlug(slug: string) {
 }
 
 // Users
-export async function listUsers() {
-  return apiRequest<{ data: UserDetail[] }>("/api/users");
+export async function listUsers(params = "") {
+  return apiRequest<{ data: UserDetail[] }>(`/api/users?limit=500&sort_by=name&sort_dir=asc${params ? "&" + params : ""}`);
 }
 
 export async function getUser(id: number) {
@@ -168,6 +169,10 @@ export async function updateUser(id: number, input: UserInput) {
 
 export async function deleteUser(id: number) {
   return apiRequest<{ data: { success: boolean } }>(`/api/users/${id}`, { method: "DELETE" });
+}
+
+export async function listExternalUsers() {
+  return apiRequest<{ data: ExternalUser[] }>("/api/external/users");
 }
 
 // Roles

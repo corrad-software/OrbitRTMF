@@ -18,7 +18,9 @@ onMounted(async () => {
     site.value = siteResponse.data;
     page.value = pageResponse.data;
   } catch (e: unknown) {
-    error.value = e instanceof Error ? e.message : "Failed to load Webfront";
+    const msg = e instanceof Error ? e.message : String(e);
+    const isNetworkError = msg.includes("NetworkError") || msg.includes("Failed to fetch") || msg.includes("fetch");
+    error.value = isNetworkError ? "NETWORK_ERROR" : msg || "Failed to load Webfront";
   } finally {
     loading.value = false;
   }

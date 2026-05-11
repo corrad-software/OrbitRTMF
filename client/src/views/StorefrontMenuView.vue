@@ -23,7 +23,7 @@ function createId() {
 onMounted(async () => {
   const [menuResult, pagesResult] = await Promise.allSettled([
     getStorefrontMenu(),
-    listPages("?status=published&page=1&limit=200&sortBy=title&sortDir=asc"),
+    listPages("?status=published&page=1&limit=200&sort_by=title&sort_dir=asc"),
   ]);
   items.value = menuResult.status === "fulfilled" ? menuResult.value.data : [];
   pages.value = pagesResult.status === "fulfilled" ? pagesResult.value.data : [];

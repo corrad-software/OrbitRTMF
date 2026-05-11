@@ -66,6 +66,11 @@ class User extends Authenticatable
      */
     public function hasPermission(string $permission): bool
     {
+        // Admin role always has full access regardless of role_id assignment
+        if (strtolower($this->role ?? '') === 'admin') {
+            return true;
+        }
+
         $roleModel = $this->roleModel;
 
         return $roleModel

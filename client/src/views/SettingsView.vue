@@ -141,7 +141,7 @@ async function load() {
   try {
     const [settingsResponse, pagesResponse] = await Promise.all([
       getSettings(),
-      listPages("?status=published&page=1&limit=100&sortBy=updatedAt&sortDir=desc"),
+      listPages("?status=published&page=1&limit=100&sort_by=updated_at&sort_dir=desc"),
     ]);
     form.value = settingsResponse.data;
     publishedPages.value = pagesResponse.data;

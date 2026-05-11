@@ -10,6 +10,7 @@ use App\Models\Role;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 
 class UserController extends Controller
@@ -23,6 +24,7 @@ class UserController extends Controller
             'name' => $user->name,
             'email' => $user->email,
             'role' => $user->role,
+            'photo_url' => $user->photo_url,
             'is_active' => $user->is_active,
             'created_at' => $user->created_at,
             'updated_at' => $user->updated_at,
@@ -129,6 +131,25 @@ class UserController extends Controller
         $user->update($updateData);
 
         return $this->sendOk($this->formatUser($user));
+    }
+
+    public function externalIndex(): JsonResponse
+    {
+        $rows = DB::connection('mysql_external')
+            ->table('User')
+            ->select('id', 'name', 'email', 'role', 'avatarUrl', 'createdAt', 'updatedAt')
+            ->get()
+            ->map(fn ($u) => [
+                'id' => $u->id,
+                'name' => $u->name,
+                'email' => $u->email,
+                'role' => $u->role,
+                'avatarUrl' => $u->avatarUrl ?? null,
+                'createdAt' => $u->createdAt,
+                'updatedAt' => $u->updatedAt,
+            ]);
+
+        return $this->sendOk($rows);
     }
 
     public function destroy(Request $request, int $id): JsonResponse

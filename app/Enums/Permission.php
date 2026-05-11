@@ -60,6 +60,11 @@ class Permission
     // Audit
     const AUDIT_READ = 'audit.read';
 
+    // RTMF
+    const RTMF_VIEW = 'rtmf.view';
+
+    const RTMF_MANAGE = 'rtmf.manage';
+
     public static function all(): array
     {
         return [
@@ -71,6 +76,7 @@ class Permission
             self::SETTINGS_VIEW, self::SETTINGS_EDIT,
             self::MENUS_VIEW, self::MENUS_EDIT,
             self::AUDIT_READ,
+            self::RTMF_VIEW, self::RTMF_MANAGE,
         ];
     }
 }

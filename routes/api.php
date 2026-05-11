@@ -10,6 +10,16 @@ use App\Http\Controllers\Api\PageController;
 use App\Http\Controllers\Api\PostController;
 use App\Http\Controllers\Api\PublicController;
 use App\Http\Controllers\Api\RoleController;
+use App\Http\Controllers\Api\RtmfActorController;
+use App\Http\Controllers\Api\RtmfFrontendController;
+use App\Http\Controllers\Api\RtmfModuleController;
+use App\Http\Controllers\Api\RtmfSubModuleController;
+use App\Http\Controllers\Api\RtmfFrontendAttachmentController;
+use App\Http\Controllers\Api\RtmfFrontendItemController;
+use App\Http\Controllers\Api\RtmfDashboardController;
+use App\Http\Controllers\Api\RtmfFrontendScenarioGroupController;
+use App\Http\Controllers\Api\RtmfFrontendScenarioRowController;
+use App\Http\Controllers\Api\RtmfUrlPathController;
 use App\Http\Controllers\Api\SettingController;
 use App\Http\Controllers\Api\UserController;
 use Illuminate\Support\Facades\Route;
@@ -44,7 +54,43 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('categories', CategoryController::class);
     Route::apiResource('pages', PageController::class);
     Route::apiResource('users', UserController::class);
+    Route::get('/external/users', [UserController::class, 'externalIndex']);
     Route::apiResource('roles', RoleController::class);
+    // RTMF — read (rtmf.view)
+    Route::middleware('permission:rtmf.view')->group(function () {
+        Route::get('/rtmf/dashboard', [RtmfDashboardController::class, 'summary']);
+        Route::get('/rtmf-frontends/{id}/attachments', [RtmfFrontendAttachmentController::class, 'index']);
+        Route::get('/rtmf-frontends/{frontendId}/items', [RtmfFrontendItemController::class, 'index']);
+        Route::get('/rtmf-frontends/{frontendId}/scenario-groups', [RtmfFrontendScenarioGroupController::class, 'index']);
+        Route::apiResource('rtmf-frontends', RtmfFrontendController::class)->only(['index', 'show']);
+        Route::apiResource('rtmf-modules', RtmfModuleController::class)->only(['index', 'show']);
+        Route::apiResource('rtmf-modules.sub-modules', RtmfSubModuleController::class)->only(['index', 'show'])->parameters(['sub-modules' => 'sub_module']);
+        Route::apiResource('rtmf-actors', RtmfActorController::class)->only(['index', 'show']);
+        Route::apiResource('rtmf-url-paths', RtmfUrlPathController::class)->only(['index', 'show']);
+        Route::get('/rtmf-frontends/export/csv', [RtmfFrontendController::class, 'export']);
+    });
+
+    // RTMF — write (rtmf.manage)
+    Route::middleware('permission:rtmf.manage')->group(function () {
+        Route::post('/rtmf-frontends/{id}/attachments', [RtmfFrontendAttachmentController::class, 'store']);
+        Route::patch('/rtmf-frontends/{id}/attachments/{attachmentId}', [RtmfFrontendAttachmentController::class, 'update']);
+        Route::delete('/rtmf-frontends/{id}/attachments/{attachmentId}', [RtmfFrontendAttachmentController::class, 'destroy']);
+        Route::post('/rtmf-frontends/{frontendId}/items', [RtmfFrontendItemController::class, 'store']);
+        Route::patch('/rtmf-frontends/{frontendId}/items/{itemId}', [RtmfFrontendItemController::class, 'update']);
+        Route::delete('/rtmf-frontends/{frontendId}/items/{itemId}', [RtmfFrontendItemController::class, 'destroy']);
+        Route::post('/rtmf-frontends/{frontendId}/scenario-groups', [RtmfFrontendScenarioGroupController::class, 'store']);
+        Route::patch('/rtmf-frontends/{frontendId}/scenario-groups/{groupId}', [RtmfFrontendScenarioGroupController::class, 'update']);
+        Route::delete('/rtmf-frontends/{frontendId}/scenario-groups/{groupId}', [RtmfFrontendScenarioGroupController::class, 'destroy']);
+        Route::post('/rtmf-frontends/{frontendId}/scenario-groups/{groupId}/rows', [RtmfFrontendScenarioRowController::class, 'store']);
+        Route::patch('/rtmf-frontends/{frontendId}/scenario-groups/{groupId}/rows/{rowId}', [RtmfFrontendScenarioRowController::class, 'update']);
+        Route::delete('/rtmf-frontends/{frontendId}/scenario-groups/{groupId}/rows/{rowId}', [RtmfFrontendScenarioRowController::class, 'destroy']);
+        Route::apiResource('rtmf-frontends', RtmfFrontendController::class)->only(['store', 'update', 'destroy']);
+        Route::apiResource('rtmf-modules', RtmfModuleController::class)->only(['store', 'update', 'destroy']);
+        Route::apiResource('rtmf-modules.sub-modules', RtmfSubModuleController::class)->only(['store', 'update', 'destroy'])->parameters(['sub-modules' => 'sub_module']);
+        Route::apiResource('rtmf-actors', RtmfActorController::class)->only(['store', 'update', 'destroy']);
+        Route::post('/rtmf-url-paths/{rtmf_url_path}/snapshot', [RtmfUrlPathController::class, 'captureSnapshot']);
+        Route::apiResource('rtmf-url-paths', RtmfUrlPathController::class)->only(['store', 'update', 'destroy']);
+    });
 
     Route::get('/media', [MediaController::class, 'index']);
     Route::post('/media/upload', [MediaController::class, 'upload']);

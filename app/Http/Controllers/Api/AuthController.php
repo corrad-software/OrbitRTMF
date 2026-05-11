@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\LoginRequest;
 use App\Http\Traits\ApiResponse;
 use App\Services\AuditService;
+use App\Services\ExternalAuthService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -18,6 +19,7 @@ class AuthController extends Controller
 
     public function __construct(
         protected AuditService $auditService,
+        protected ExternalAuthService $externalAuth,
     ) {}
 
     /**
@@ -27,10 +29,13 @@ class AuthController extends Controller
     {
         $credentials = $request->only('email', 'password');
 
-        if (! Auth::attempt($credentials)) {
+        $localUser = $this->externalAuth->attempt($credentials['email'], $credentials['password']);
+
+        if (! $localUser) {
             return $this->sendError(401, 'INVALID_CREDENTIALS', 'Invalid email or password');
         }
 
+        Auth::login($localUser);
         $request->session()->regenerate();
 
         $user = Auth::user();

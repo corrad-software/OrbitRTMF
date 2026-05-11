@@ -52,6 +52,9 @@ const menuTree = computed(() => {
             <p v-if="site?.webfrontTagline || site?.tagline" class="text-sm text-slate-500">{{ site?.webfrontTagline || site?.tagline }}</p>
           </div>
         </div>
+        <router-link to="/admin/login" class="rounded-md bg-violet-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-violet-700">
+          Login
+        </router-link>
       </div>
       <div v-if="menuTree.roots.length" class="border-t border-slate-100 bg-white">
         <nav class="mx-auto flex w-full max-w-4xl flex-wrap items-center gap-1 px-4 py-2">
@@ -107,6 +110,19 @@ const menuTree = computed(() => {
 
     <main class="mx-auto w-full max-w-4xl px-4 py-8">
       <div v-if="loading" class="rounded-lg border border-slate-200 bg-white p-6 text-slate-500">Loading page...</div>
+      <div v-else-if="error === 'NETWORK_ERROR'" class="rounded-xl border border-amber-200 bg-amber-50 p-6 shadow-sm">
+        <div class="mb-3 flex items-center gap-2">
+          <span class="text-2xl">⚠️</span>
+          <h2 class="text-lg font-semibold text-amber-800">Cannot connect to backend</h2>
+        </div>
+        <p class="mb-4 text-sm text-amber-700">The API server is unreachable. This usually means the backend services are not running.</p>
+        <div class="rounded-lg border border-amber-200 bg-white p-4">
+          <p class="mb-2 text-sm font-medium text-slate-700">To start all services, run this command in your project root:</p>
+          <pre class="overflow-x-auto rounded-md bg-slate-900 px-4 py-3 text-sm text-green-400">composer dev</pre>
+          <p class="mt-3 text-xs text-slate-500">This starts the Laravel server, Vite client, queue worker, and log tailing.</p>
+        </div>
+        <p class="mt-4 text-xs text-amber-600">Once services are running, refresh this page.</p>
+      </div>
       <div v-else-if="error" class="rounded-lg border border-rose-200 bg-rose-50 p-6 text-rose-700">{{ error }}</div>
       <article v-else-if="page" class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
         <img
