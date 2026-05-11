@@ -28,6 +28,9 @@ return Application::configure(basePath: dirname(__DIR__))
         });
     })
     ->withMiddleware(function (Middleware $middleware): void {
+        // Coolify / reverse proxy: honour X-Forwarded-Proto, Host, etc.
+        $middleware->trustProxies(at: '*');
+
         $middleware->statefulApi();
 
         $middleware->alias([
