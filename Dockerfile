@@ -14,10 +14,11 @@ RUN npm ci
 
 COPY client/ ./
 
-# Same-origin UI+API (this Dockerfile): leave empty or unset in Coolify build args.
-# Split subdomain (UI vs API): set to full API origin, e.g. https://katalog-api.sena.my
-ARG VITE_API_BASE_URL=
-ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
+# Do not ENV-map Coolify's VITE_API_BASE_URL build-arg — it auto-fills UI FQDN and breaks combined images.
+# Same-origin UI+API: omit SPA_API_BASE_URL (recommended for this Dockerfile).
+# Split subdomain: in Coolify add custom build-arg SPA_API_BASE_URL=https://your-api.example.com
+ARG SPA_API_BASE_URL=
+ENV VITE_API_BASE_URL=${SPA_API_BASE_URL}
 
 RUN npm run build
 
