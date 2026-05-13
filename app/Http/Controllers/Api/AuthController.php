@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\LoginRequest;
 use App\Http\Traits\ApiResponse;
+use App\Models\User;
 use App\Services\AuditService;
 use App\Services\ExternalAuthService;
 use Illuminate\Http\JsonResponse;
@@ -29,10 +30,23 @@ class AuthController extends Controller
     {
         $credentials = $request->only('email', 'password');
 
-        $localUser = $this->externalAuth->attempt($credentials['email'], $credentials['password']);
+        $localUser = null;
+        try {
+            $localUser = $this->externalAuth->attempt($credentials['email'], $credentials['password']);
+        } catch (\Throwable) {
+            // External MySQL (testagent) unavailable or misconfigured — fall back to app DB (e.g. PostgreSQL seed).
+        }
+
+        if (! $localUser) {
+            $localUser = $this->attemptLocalDatabaseLogin($credentials['email'], $credentials['password']);
+        }
 
         if (! $localUser) {
             return $this->sendError(401, 'INVALID_CREDENTIALS', 'Invalid email or password');
+        }
+
+        if (! $localUser->is_active) {
+            return $this->sendError(403, 'ACCOUNT_DISABLED', 'This account has been disabled');
         }
 
         Auth::login($localUser);
@@ -177,6 +191,20 @@ class AuthController extends Controller
         return $this->sendOk([
             'user' => $this->userPayload($user),
         ]);
+    }
+
+    /**
+     * Authenticate against the default app database (users seeded via UserSeeder, etc.).
+     */
+    protected function attemptLocalDatabaseLogin(string $email, string $password): ?User
+    {
+        $user = User::query()->where('email', $email)->first();
+
+        if (! $user || ! Hash::check($password, $user->password)) {
+            return null;
+        }
+
+        return $user;
     }
 
     /**
