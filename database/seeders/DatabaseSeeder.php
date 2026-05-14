@@ -21,6 +21,7 @@ class DatabaseSeeder extends Seeder
             CategorySeeder::class,
             PostSeeder::class,
             RtmfFrontendSeeder::class,
+            RtmfAduanSeeder::class,
         ]);
     }
 }

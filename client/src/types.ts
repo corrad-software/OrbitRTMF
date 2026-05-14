@@ -206,6 +206,78 @@ export type RtmfFrontend = RtmfFrontendInput & {
   snapshotCapturedAt?: string | null;
 };
 
+export type RtmfScenarioStepLinkInput = {
+  toStepId?: number | null;
+  condition?: string | null;
+  sortOrder?: number;
+};
+
+export type RtmfScenarioStepLink = RtmfScenarioStepLinkInput & {
+  id: number;
+  fromStepId: number;
+  toStep?: { id: number; rtmfFrontendId?: number | null; page?: { id: number; specId: string; title: string } | null } | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type RtmfScenarioStepInput = {
+  rtmfFrontendId?: number | null;
+  actorIds?: number[];
+  note?: string | null;
+  sortOrder?: number;
+};
+
+export type RtmfScenarioStep = RtmfScenarioStepInput & {
+  id: number;
+  rtmfScenarioId: number;
+  page?: { id: number; specId: string; title: string } | null;
+  actors?: { id: number; name: string }[];
+  links?: RtmfScenarioStepLink[];
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type RtmfScenarioAttachment = {
+  id: number;
+  rtmfScenarioId: number;
+  label: string | null;
+  filename: string;
+  originalName: string;
+  mimeType: string;
+  size: number;
+  url: string;
+  createdAt: string;
+};
+
+export type RtmfScenarioInput = {
+  title: string;
+  description?: string | null;
+  isDone?: boolean;
+  assignees?: RtmfFrontendAssignee[];
+};
+
+export type RtmfScenario = RtmfScenarioInput & {
+  id: number;
+  sortOrder: number;
+  stepsCount?: number;
+  steps?: RtmfScenarioStep[];
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type RtmfFrontendFeedbackRole = 'business_analyst' | 'qa' | 'technical';
+export type RtmfFrontendFeedbackStatus = 'open' | 'reviewed' | 'approved';
+
+export type RtmfFrontendFeedback = {
+  id: number;
+  rtmfFrontendId: number;
+  role: RtmfFrontendFeedbackRole;
+  status: RtmfFrontendFeedbackStatus;
+  comment: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
 export type ThemeColor = "violet" | "blue" | "green" | "red" | "black-white" | "grey";
 
 export type ApiError = { error: { code: string; message: string; details?: unknown } };
@@ -385,4 +457,38 @@ export type AuditLog = {
   userAgent: string | null;
   createdAt: string;
   user?: { id: number; name: string; email: string } | null;
+};
+
+
+export type RtmfImportFrontendResult = {
+  specId: string;
+  action: 'created' | 'updated';
+  items: number;
+  endpoints: number;
+};
+
+export type RtmfImportResult = {
+  module: string;
+  subModule: string;
+  frontends: RtmfImportFrontendResult[];
+};
+
+export type RtmfApiEndpointMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+
+export type RtmfFrontendApiEndpoint = {
+  id: number;
+  rtmfFrontendId: number;
+  method: RtmfApiEndpointMethod;
+  endpoint: string;
+  description: string | null;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type RtmfFrontendApiEndpointInput = {
+  method?: RtmfApiEndpointMethod;
+  endpoint: string;
+  description?: string | null;
+  sortOrder?: number;
 };

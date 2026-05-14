@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from "vue";
 import { RouterLink, useRoute, useRouter } from "vue-router";
-import { Paperclip, Trash2 as TrashIcon, LayoutGrid, Save, Trash2, Upload, X, Plus, TableProperties, ClipboardList, ExternalLink, GitMerge, Search, Network, GripVertical, Layout, UserCheck } from "lucide-vue-next";
+import { Cable, Paperclip, Trash2 as TrashIcon, LayoutGrid, Save, Trash2, Upload, X, Plus, TableProperties, ExternalLink, GitMerge, Search, Network, GripVertical, Layout, UserCheck, MessageSquare } from "lucide-vue-next";
 
 import AdminLayout from "@/layouts/AdminLayout.vue";
 import MarkdownEditor from "@/components/MarkdownEditor.vue";
@@ -29,9 +29,15 @@ import {
   createRtmfScenarioRow,
   updateRtmfScenarioRow,
   deleteRtmfScenarioRow,
+  listRtmfFrontendFeedbacks,
+  upsertRtmfFrontendFeedback,
+  listRtmfApiEndpoints,
+  createRtmfApiEndpoint,
+  updateRtmfApiEndpoint,
+  deleteRtmfApiEndpoint,
 } from "@/api/rtmf";
 import { listUsers, listExternalUsers } from "@/api/cms";
-import type { RtmfActor, RtmfAttachment, RtmfFrontend, RtmfFrontendAssignee, RtmfFrontendItem, RtmfFrontendScenarioGroup, RtmfFrontendScenarioRow, RtmfModule, RtmfSubModule } from "@/types";
+import type { RtmfActor, RtmfApiEndpointMethod, RtmfAttachment, RtmfFrontend, RtmfFrontendApiEndpoint, RtmfFrontendAssignee, RtmfFrontendFeedback, RtmfFrontendFeedbackStatus, RtmfFrontendItem, RtmfFrontendScenarioGroup, RtmfFrontendScenarioRow, RtmfModule, RtmfSubModule } from "@/types";
 import { useConfirmDialog } from "@/composables/useConfirmDialog";
 import { useToast } from "@/composables/useToast";
 import { useAuthStore } from "@/stores/auth";
@@ -526,7 +532,78 @@ function formatBytes(bytes: number) {
 }
 
 // ── Tab state ──
-const activeTab = ref<"frontend" | "mockup" | "scenario">("frontend");
+const activeTab = ref<"frontend" | "api" | "mockup" | "scenario" | "feedback">("frontend");
+
+// ── API Endpoints ──
+const apiEndpoints = ref<RtmfFrontendApiEndpoint[]>([]);
+
+const HTTP_METHODS: RtmfApiEndpointMethod[] = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'];
+
+const METHOD_COLORS: Record<RtmfApiEndpointMethod, string> = {
+  GET:    'bg-emerald-100 text-emerald-700',
+  POST:   'bg-blue-100 text-blue-700',
+  PUT:    'bg-amber-100 text-amber-700',
+  PATCH:  'bg-orange-100 text-orange-700',
+  DELETE: 'bg-rose-100 text-rose-700',
+};
+
+async function addApiEndpoint() {
+  if (!isEdit.value) return;
+  try {
+    const res = await createRtmfApiEndpoint(id.value, { method: 'GET', endpoint: '' });
+    apiEndpoints.value.push(res.data);
+  } catch {
+    toast.error("Failed to add endpoint");
+  }
+}
+
+async function saveApiEndpoint(ep: RtmfFrontendApiEndpoint) {
+  try {
+    await updateRtmfApiEndpoint(id.value, ep.id, {
+      method: ep.method,
+      endpoint: ep.endpoint,
+      description: ep.description,
+    });
+  } catch {
+    toast.error("Failed to save endpoint");
+  }
+}
+
+async function removeApiEndpoint(epId: number) {
+  try {
+    await deleteRtmfApiEndpoint(id.value, epId);
+    apiEndpoints.value = apiEndpoints.value.filter(e => e.id !== epId);
+  } catch {
+    toast.error("Failed to delete endpoint");
+  }
+}
+
+// ── Feedback state ──
+const feedbacks = ref<RtmfFrontendFeedback[]>([]);
+
+const FEEDBACK_ROLES = [
+  { key: 'business_analyst' as const, label: 'Business Analyst' },
+  { key: 'qa' as const,               label: 'QA' },
+  { key: 'technical' as const,        label: 'Technical' },
+];
+
+function feedbackFor(role: string) {
+  return feedbacks.value.find(f => f.role === role)
+    ?? { id: 0, role, status: 'open', comment: null } as unknown as RtmfFrontendFeedback;
+}
+
+async function saveFeedback(role: string, patch: { status?: string; comment?: string | null }) {
+  const fb = feedbackFor(role);
+  const payload = { status: fb.status, comment: fb.comment, ...patch };
+  try {
+    const res = await upsertRtmfFrontendFeedback(id.value, role, payload);
+    const idx = feedbacks.value.findIndex(f => f.role === role);
+    if (idx >= 0) feedbacks.value[idx] = res.data;
+    else feedbacks.value.push(res.data);
+  } catch {
+    toast.error("Failed to save feedback");
+  }
+}
 
 // ── Mockup image (stored as attachment with label __mockup__) ──
 const mockupAttachment = computed(() => attachments.value.find((a) => a.label === "__mockup__") ?? null);
@@ -619,6 +696,12 @@ onMounted(async () => {
   await loadItems();
   await loadAttachments();
   await loadScenarioGroups();
+  if (isEdit.value) {
+    const fbRes = await listRtmfFrontendFeedbacks(id.value);
+    feedbacks.value = fbRes.data;
+    const epRes = await listRtmfApiEndpoints(id.value);
+    apiEndpoints.value = epRes.data;
+  }
 });
 </script>
 
@@ -650,6 +733,15 @@ onMounted(async () => {
           Frontend
         </button>
         <button
+          @click="activeTab = 'api'"
+          class="flex items-center gap-2 border-b-2 px-5 py-2.5 text-sm font-medium transition-colors"
+          :class="activeTab === 'api' ? 'border-violet-600 bg-white text-violet-700' : 'border-transparent text-slate-500 hover:bg-white hover:text-slate-700'"
+        >
+          <Cable class="h-4 w-4" />
+          API
+          <span v-if="apiEndpoints.length" class="ml-1 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600">{{ apiEndpoints.length }}</span>
+        </button>
+        <button
           @click="activeTab = 'mockup'"
           class="flex items-center gap-2 border-b-2 px-5 py-2.5 text-sm font-medium transition-colors"
           :class="activeTab === 'mockup' ? 'border-violet-600 bg-white text-violet-700' : 'border-transparent text-slate-500 hover:bg-white hover:text-slate-700'"
@@ -658,14 +750,16 @@ onMounted(async () => {
           Mockup
           <span v-if="items.length" class="ml-1 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600">{{ items.length }}</span>
         </button>
+        <!-- Scenario tab hidden temporarily -->
+
         <button
-          @click="activeTab = 'scenario'"
+          @click="activeTab = 'feedback'"
           class="flex items-center gap-2 border-b-2 px-5 py-2.5 text-sm font-medium transition-colors"
-          :class="activeTab === 'scenario' ? 'border-violet-600 bg-white text-violet-700' : 'border-transparent text-slate-500 hover:bg-white hover:text-slate-700'"
+          :class="activeTab === 'feedback' ? 'border-violet-600 bg-white text-violet-700' : 'border-transparent text-slate-500 hover:bg-white hover:text-slate-700'"
         >
-          <ClipboardList class="h-4 w-4" />
-          Scenario
-          <span class="ml-1 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600">{{ scenarioGroups.length }}</span>
+          <MessageSquare class="h-4 w-4" />
+          Feedback
+          <span class="ml-1 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600">{{ feedbacks.filter(f => f.status !== 'open').length }}/3</span>
         </button>
       </div>
 
@@ -746,8 +840,8 @@ onMounted(async () => {
         </div>
       </article>
 
-      <!-- Page Links (edit mode only) -->
-      <article v-if="isEdit" class="rounded-lg border border-slate-200 bg-white shadow-sm">
+      <!-- Page Links hidden temporarily -->
+      <article v-if="false" class="rounded-lg border border-slate-200 bg-white shadow-sm">
         <div class="flex items-center gap-2 border-b border-slate-100 px-4 py-2.5">
           <GitMerge class="h-4 w-4 text-violet-600" />
           <h2 class="text-sm font-semibold text-slate-900">Page Links</h2>
@@ -881,31 +975,6 @@ onMounted(async () => {
 
         <!-- Right: sidebar (edit mode only) -->
         <aside v-if="isEdit" class="sticky top-4 space-y-4">
-
-          <!-- Done toggle card -->
-          <div class="rounded-lg border bg-white shadow-sm transition-colors" :class="isDone ? 'border-emerald-200' : 'border-slate-200'">
-            <div class="flex items-center gap-3 px-4 py-3">
-              <div class="flex-1">
-                <p class="text-sm font-semibold text-slate-800">Mark as Done</p>
-                <p class="mt-0.5 text-xs" :class="isDone ? 'text-emerald-600' : 'text-slate-400'">
-                  {{ isDone ? 'This page is completed' : 'Not yet completed' }}
-                </p>
-              </div>
-              <button
-                type="button"
-                :disabled="!canToggleDone"
-                @click="isDone = !isDone; toggleDone()"
-                class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none disabled:cursor-not-allowed disabled:opacity-40"
-                :class="isDone ? 'bg-emerald-500' : 'bg-slate-200'"
-                :title="!canToggleDone ? 'Only assigned users or admins can toggle this' : ''"
-              >
-                <span
-                  class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200"
-                  :class="isDone ? 'translate-x-5' : 'translate-x-0'"
-                />
-              </button>
-            </div>
-          </div>
 
           <!-- Assign to card -->
           <div class="rounded-lg border border-slate-200 bg-white shadow-sm">
@@ -1064,6 +1133,83 @@ onMounted(async () => {
         </aside>
 
       </div><!-- end frontend tab grid -->
+
+      <!-- API tab (edit mode only) -->
+      <div v-if="isEdit" v-show="activeTab === 'api'" class="space-y-4">
+        <article class="rounded-lg border border-slate-200 bg-white shadow-sm">
+          <div class="flex items-center gap-2 border-b border-slate-100 px-4 py-3">
+            <Cable class="h-4 w-4 text-violet-600" />
+            <h2 class="text-sm font-semibold text-slate-900">API Endpoints</h2>
+            <span class="ml-auto text-sm text-slate-400">{{ apiEndpoints.length }} endpoint{{ apiEndpoints.length !== 1 ? 's' : '' }}</span>
+          </div>
+
+          <div class="overflow-x-auto">
+            <!-- Header -->
+            <div v-if="apiEndpoints.length > 0" class="grid min-w-[640px] grid-cols-[100px_1fr_1fr_40px] gap-3 border-b border-slate-100 bg-slate-50 px-5 py-2 text-xs font-semibold uppercase tracking-wide text-slate-500">
+              <span>Method</span>
+              <span>Endpoint</span>
+              <span>Description</span>
+              <span></span>
+            </div>
+
+            <div class="divide-y divide-slate-100">
+              <div
+                v-for="ep in apiEndpoints"
+                :key="ep.id"
+                class="grid min-w-[640px] grid-cols-[100px_1fr_1fr_40px] items-center gap-3 px-5 py-2.5 hover:bg-slate-50"
+              >
+                <!-- Method -->
+                <select
+                  v-model="ep.method"
+                  @change="saveApiEndpoint(ep)"
+                  class="w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs font-semibold shadow-sm focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100"
+                  :class="METHOD_COLORS[ep.method]"
+                >
+                  <option v-for="m in HTTP_METHODS" :key="m" :value="m">{{ m }}</option>
+                </select>
+
+                <!-- Endpoint URL -->
+                <input
+                  v-model="ep.endpoint"
+                  @blur="saveApiEndpoint(ep)"
+                  class="w-full rounded-lg border border-slate-200 px-2.5 py-1.5 font-mono text-xs text-slate-700 shadow-sm focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100"
+                  placeholder="/api/resource"
+                />
+
+                <!-- Description -->
+                <input
+                  v-model="ep.description"
+                  @blur="saveApiEndpoint(ep)"
+                  class="w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs text-slate-700 shadow-sm focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100"
+                  placeholder="What this call does…"
+                />
+
+                <!-- Delete -->
+                <button
+                  @click="removeApiEndpoint(ep.id)"
+                  class="flex items-center justify-center rounded p-1.5 text-slate-300 hover:bg-rose-50 hover:text-rose-500"
+                >
+                  <TrashIcon class="h-3.5 w-3.5" />
+                </button>
+              </div>
+            </div>
+
+            <div v-if="apiEndpoints.length === 0" class="px-5 py-8 text-center text-sm text-slate-400">
+              No API endpoints documented yet.
+            </div>
+          </div>
+
+          <div class="border-t border-slate-100 px-5 py-3">
+            <button
+              @click="addApiEndpoint"
+              class="flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 shadow-sm transition-colors hover:bg-slate-50"
+            >
+              <Plus class="h-3.5 w-3.5" />
+              Add Endpoint
+            </button>
+          </div>
+        </article>
+      </div>
 
       <!-- Mockup tab (edit mode only) -->
       <div v-if="isEdit" v-show="activeTab === 'mockup'" class="space-y-4">
@@ -1274,7 +1420,7 @@ onMounted(async () => {
                   v-model="item.validation"
                   @blur="saveItem(item)"
                   class="w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-sm text-slate-700 shadow-sm focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100"
-                  placeholder="e.g. Required, Max 255"
+                  placeholder="e.g. Max 255, Email"
                 />
                 <!-- Action: page picker per pair, aligned to condition rows -->
                 <div v-else class="space-y-1">
@@ -1463,6 +1609,69 @@ onMounted(async () => {
             <Plus class="h-3.5 w-3.5" />
             Add Scenario Group
           </button>
+        </div>
+      </article>
+
+      <!-- Feedback (edit mode only) -->
+      <article v-if="isEdit" v-show="activeTab === 'feedback'" class="rounded-lg border border-slate-200 bg-white shadow-sm">
+        <div class="flex items-center gap-2 border-b border-slate-100 px-4 py-2.5">
+          <MessageSquare class="h-4 w-4 text-violet-600" />
+          <h2 class="text-sm font-semibold text-slate-900">Feedback</h2>
+        </div>
+        <!-- Mark as Done -->
+        <div class="flex items-center gap-4 border-b border-slate-100 px-4 py-3" :class="isDone ? 'bg-emerald-50' : ''">
+          <div class="w-44 flex-shrink-0">
+            <p class="text-sm font-semibold text-slate-800">Mark as Done</p>
+            <p class="mt-0.5 text-xs" :class="isDone ? 'text-emerald-600' : 'text-slate-400'">
+              {{ isDone ? 'This page is completed' : 'Not yet completed' }}
+            </p>
+          </div>
+          <button
+            type="button"
+            :disabled="!canToggleDone"
+            @click="isDone = !isDone; toggleDone()"
+            class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none disabled:cursor-not-allowed disabled:opacity-40"
+            :class="isDone ? 'bg-emerald-500' : 'bg-slate-200'"
+            :title="!canToggleDone ? 'Only assigned users or admins can toggle this' : ''"
+          >
+            <span
+              class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200"
+              :class="isDone ? 'translate-x-5' : 'translate-x-0'"
+            />
+          </button>
+        </div>
+
+        <div class="divide-y divide-slate-100">
+          <div v-for="roleDef in FEEDBACK_ROLES" :key="roleDef.key" class="p-4">
+            <div class="flex items-start gap-4">
+              <div class="w-44 flex-shrink-0 pt-0.5">
+                <span class="text-sm font-semibold text-slate-700">{{ roleDef.label }}</span>
+              </div>
+              <div class="flex-1 space-y-2">
+                <select
+                  :value="feedbackFor(roleDef.key).status"
+                  @change="saveFeedback(roleDef.key, { status: ($event.target as HTMLSelectElement).value as RtmfFrontendFeedbackStatus })"
+                  class="rounded-lg border px-3 py-1.5 text-sm font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-violet-100 transition-colors"
+                  :class="{
+                    'border-slate-200 bg-slate-50 text-slate-500': feedbackFor(roleDef.key).status === 'open',
+                    'border-blue-200 bg-blue-50 text-blue-700': feedbackFor(roleDef.key).status === 'reviewed',
+                    'border-emerald-200 bg-emerald-50 text-emerald-700': feedbackFor(roleDef.key).status === 'approved',
+                  }"
+                >
+                  <option value="open">Open</option>
+                  <option value="reviewed">Reviewed</option>
+                  <option value="approved">Approved</option>
+                </select>
+                <textarea
+                  :value="feedbackFor(roleDef.key).comment ?? ''"
+                  @blur="saveFeedback(roleDef.key, { comment: ($event.target as HTMLTextAreaElement).value || null })"
+                  rows="2"
+                  class="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 placeholder-slate-400 shadow-sm focus:border-violet-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-violet-100"
+                  placeholder="Leave a comment…"
+                />
+              </div>
+            </div>
+          </div>
         </div>
       </article>
 

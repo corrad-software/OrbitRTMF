@@ -20,6 +20,10 @@ import RtmfModuleEditorView from "@/views/RtmfModuleEditorView.vue";
 import RtmfActorsListView from "@/views/RtmfActorsListView.vue";
 import RtmfActorEditorView from "@/views/RtmfActorEditorView.vue";
 import RtmfExportView from "@/views/RtmfExportView.vue";
+import RtmfImportView from "@/views/RtmfImportView.vue";
+import RtmfScenariosListView from "@/views/RtmfScenariosListView.vue";
+import RtmfScenarioEditorView from "@/views/RtmfScenarioEditorView.vue";
+import DefectReportingView from "@/views/DefectReportingView.vue";
 
 import CategoriesListView from "@/views/CategoriesListView.vue";
 import CategoryEditorView from "@/views/CategoryEditorView.vue";
@@ -117,6 +121,12 @@ const router = createRouter({
     { path: "/admin/rtmf/actors/new", name: "rtmf-actor-create", component: RtmfActorEditorView, meta: { requiresAuth: true, title: "New Actor" } },
     { path: "/admin/rtmf/actors/:id", name: "rtmf-actor-edit", component: RtmfActorEditorView, meta: { requiresAuth: true, title: "Edit Actor" } },
     { path: "/admin/rtmf/export", name: "rtmf-export", component: RtmfExportView, meta: { requiresAuth: true, title: "Export" } },
+    { path: "/admin/rtmf/import", name: "rtmf-import", component: RtmfImportView, meta: { requiresAuth: true, title: "Import" } },
+    { path: "/admin/rtmf/scenarios", name: "rtmf-scenarios", component: RtmfScenariosListView, meta: { requiresAuth: true, title: "Flow Scenarios — RTMF" } },
+    { path: "/admin/rtmf/scenarios/new", name: "rtmf-scenario-create", component: RtmfScenarioEditorView, meta: { requiresAuth: true, title: "New Scenario — RTMF" } },
+    { path: "/admin/rtmf/scenarios/:id", name: "rtmf-scenario-edit", component: RtmfScenarioEditorView, meta: { requiresAuth: true, title: "Edit Scenario — RTMF" } },
+
+    { path: "/admin/defects", name: "defect-reporting", component: DefectReportingView, meta: { requiresAuth: true, title: "Defect Reporting" } },
 
     { path: "/admin/rtmf-frontends", redirect: "/admin/rtmf/frontends" },
     { path: "/admin/rtmf-frontends/new", redirect: "/admin/rtmf/frontends/new" },

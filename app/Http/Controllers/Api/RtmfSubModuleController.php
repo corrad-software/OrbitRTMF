@@ -85,6 +85,10 @@ class RtmfSubModuleController extends Controller
         if (! $row) {
             return $this->sendError(404, 'NOT_FOUND', 'Sub-module not found');
         }
+
+        // Detach direct children before soft-deleting so they are not orphaned
+        RtmfSubModule::where('parent_id', $id)->update(['parent_id' => null]);
+
         $row->delete();
 
         return $this->sendOk(['success' => true]);
