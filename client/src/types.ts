@@ -140,6 +140,12 @@ export type RtmfDashboardActorStat = {
   frontendsCount: number;
 };
 
+export type RtmfReviewRoleStat = {
+  approved: number;
+  reviewed: number;
+  open: number;
+};
+
 export type RtmfDashboardSummary = {
   totals: {
     frontends: number;
@@ -148,6 +154,7 @@ export type RtmfDashboardSummary = {
     actors: number;
     items: number;
     scenarios: number;
+    approvedAll: number;
   };
   itemsByStatus: {
     implemented: number;
@@ -157,6 +164,12 @@ export type RtmfDashboardSummary = {
   };
   byModule: RtmfDashboardModuleStat[];
   byActor: RtmfDashboardActorStat[];
+  byReview: {
+    businessAnalyst: RtmfReviewRoleStat;
+    qa: RtmfReviewRoleStat;
+    technical: RtmfReviewRoleStat;
+    developer: RtmfReviewRoleStat;
+  };
 };
 
 export type RtmfFrontendLink = {
@@ -207,6 +220,102 @@ export type RtmfFrontend = RtmfFrontendInput & {
   linksTo?: RtmfFrontendLink[];
   snapshotStatus?: RtmfSnapshotStatus;
   snapshotCapturedAt?: string | null;
+  feedbacks?: RtmfFrontendFeedback[];
+};
+
+export type RtmfScenarioStepLinkInput = {
+  toStepId?: number | null;
+  condition?: string | null;
+  sortOrder?: number;
+};
+
+export type RtmfScenarioStepLink = RtmfScenarioStepLinkInput & {
+  id: number;
+  fromStepId: number;
+  toStep?: { id: number; rtmfFrontendId?: number | null; page?: { id: number; specId: string; title: string } | null } | null;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type RtmfScenarioStepInput = {
+  rtmfFrontendId?: number | null;
+  actorIds?: number[];
+  note?: string | null;
+  sortOrder?: number;
+};
+
+export type RtmfScenarioStep = RtmfScenarioStepInput & {
+  id: number;
+  rtmfScenarioId: number;
+  page?: { id: number; specId: string; title: string } | null;
+  actors?: { id: number; name: string }[];
+  links?: RtmfScenarioStepLink[];
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type RtmfScenarioAttachment = {
+  id: number;
+  rtmfScenarioId: number;
+  label: string | null;
+  filename: string;
+  originalName: string;
+  mimeType: string;
+  size: number;
+  url: string;
+  createdAt: string;
+};
+
+export type RtmfScenarioInput = {
+  title: string;
+  description?: string | null;
+  isDone?: boolean;
+  assignees?: RtmfFrontendAssignee[];
+};
+
+export type RtmfScenario = RtmfScenarioInput & {
+  id: number;
+  sortOrder: number;
+  stepsCount?: number;
+  steps?: RtmfScenarioStep[];
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type RtmfProjectInput = {
+  code: string;
+  name: string;
+  description?: string | null;
+  sortOrder?: number;
+};
+
+export type RtmfProject = RtmfProjectInput & {
+  id: number;
+  myRole?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type RtmfProjectMember = {
+  id: number;
+  name: string;
+  email: string;
+  role: string;
+  projectRole?: string;
+  photoUrl?: string | null;
+};
+
+export type RtmfFrontendFeedbackRole = 'business_analyst' | 'qa' | 'technical' | 'developer';
+export type RtmfFrontendFeedbackStatus = 'open' | 'reviewed' | 'approved';
+
+export type RtmfFrontendFeedback = {
+  id: number;
+  rtmfFrontendId: number;
+  role: RtmfFrontendFeedbackRole;
+  status: RtmfFrontendFeedbackStatus;
+  comment: string | null;
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type RtmfUrlPathInput = {
@@ -410,4 +519,38 @@ export type AuditLog = {
   userAgent: string | null;
   createdAt: string;
   user?: { id: number; name: string; email: string } | null;
+};
+
+
+export type RtmfImportFrontendResult = {
+  specId: string;
+  action: 'created' | 'updated';
+  items: number;
+  endpoints: number;
+};
+
+export type RtmfImportResult = {
+  module: string;
+  subModule: string;
+  frontends: RtmfImportFrontendResult[];
+};
+
+export type RtmfApiEndpointMethod = 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+
+export type RtmfFrontendApiEndpoint = {
+  id: number;
+  rtmfFrontendId: number;
+  method: RtmfApiEndpointMethod;
+  endpoint: string;
+  description: string | null;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type RtmfFrontendApiEndpointInput = {
+  method?: RtmfApiEndpointMethod;
+  endpoint: string;
+  description?: string | null;
+  sortOrder?: number;
 };

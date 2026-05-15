@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { Bell, Check, ChevronDown, LogOut, MessageCircle, Send, Settings, Shield } from "lucide-vue-next";
+import { Bell, Check, ChevronDown, FolderKanban, LogOut, MessageCircle, Send, Settings, Shield } from "lucide-vue-next";
 
 import type { ThemeColor } from "@/types";
 import type { MenuItemDef, MenuNode } from "@/config/admin-menu";
@@ -13,6 +13,7 @@ import { useAuthStore } from "@/stores/auth";
 import { useMenuStore } from "@/stores/menu";
 import { useSiteStore } from "@/stores/site";
 import { useUiThemeStore } from "@/stores/uiTheme";
+import { useRtmfProjectStore } from "@/stores/rtmfProject";
 import { API_BASE_URL } from "@/env";
 
 const route = useRoute();
@@ -21,6 +22,7 @@ const auth = useAuthStore();
 const menuStore = useMenuStore();
 const site = useSiteStore();
 const uiTheme = useUiThemeStore();
+const rtmfProjectStore = useRtmfProjectStore();
 const toast = useToast();
 const { isCollapsed, isCompact, toggle: toggleSidebar, toggleCompact } = useSidebarCollapse();
 
@@ -79,6 +81,7 @@ function resolveUrl(url: string) {
 onMounted(() => {
   site.load();
   menuStore.load();
+  rtmfProjectStore.loadProjects();
   document.addEventListener("click", handleDocumentClick);
   document.addEventListener("keydown", handleEscape);
 });
@@ -102,12 +105,19 @@ const userInitials = computed(() => {
 
 const userRoleLabel = computed(() => auth.user?.role || "Administrator");
 
-const TESTER_ALLOWED_GROUPS = new Set(["dashboard", "rtmf"]);
-const visibleMenu = computed(() =>
-  auth.isTester
+const TESTER_ALLOWED_GROUPS = new Set(["dashboard", "rtmf-setup", "rtmf"]);
+const visibleMenu = computed(() => {
+  const base = auth.isTester
     ? menuStore.resolvedMenu.filter((g) => TESTER_ALLOWED_GROUPS.has(g.id))
-    : menuStore.resolvedMenu,
-);
+    : menuStore.resolvedMenu;
+
+  if (auth.isAdmin) return base;
+
+  // Strip adminOnly items from each group for non-admins
+  return base
+    .map((g) => ({ ...g, items: g.items.filter((item) => !item.adminOnly) }))
+    .filter((g) => g.items.length > 0);
+});
 const HEADER_TEXT_MAX = 20;
 
 function truncateHeaderText(value: string, max = HEADER_TEXT_MAX) {
@@ -148,7 +158,7 @@ async function signOut() {
 }
 
 function isActive(path: string): boolean {
-  if (path === "/") return route.path === "/";
+  if (path === "/" || path === "/admin") return route.path === path;
   return route.path.startsWith(path);
 }
 
@@ -225,7 +235,14 @@ watch(() => visibleMenu.value, syncOpenMenus, { deep: true });
           :to="'/admin/settings/users/' + auth.user?.id"
           class="group relative flex h-full items-center gap-2 px-4 transition-colors hover:bg-[var(--accent-600)]"
         >
+          <img
+            v-if="auth.user?.photoUrl"
+            :src="auth.user.photoUrl"
+            class="h-6 w-6 shrink-0 rounded-full object-cover ring-1 ring-white"
+            :alt="auth.user.name"
+          />
           <div
+            v-else
             class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[var(--accent-600)] to-[var(--accent-500)] text-[10px] font-semibold text-white"
           >
             {{ userInitials }}
@@ -412,6 +429,32 @@ watch(() => visibleMenu.value, syncOpenMenus, { deep: true });
           </div>
         </div>
 
+        <!-- Project picker — top of sidebar -->
+        <div class="border-b border-slate-200 bg-white" :class="isCollapsed ? 'md:flex md:justify-center md:px-0 md:py-2.5 px-3 py-2.5' : 'px-3 py-3'">
+          <!-- Collapsed: icon only -->
+          <div v-if="isCollapsed" class="flex justify-center">
+            <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-[var(--accent-100)]">
+              <FolderKanban class="h-4 w-4 text-[var(--accent-600)]" />
+            </div>
+          </div>
+          <!-- Expanded: full picker -->
+          <div v-else>
+            <p class="mb-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400">Active Project</p>
+            <div class="relative">
+              <FolderKanban class="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--accent-500)]" />
+              <select
+                :value="rtmfProjectStore.activeProjectId ?? ''"
+                class="w-full appearance-none rounded-lg border border-slate-200 bg-slate-50 py-2.5 pl-9 pr-8 text-sm font-medium text-slate-800 shadow-sm focus:border-[var(--accent-400)] focus:bg-white focus:outline-none focus:ring-2 focus:ring-[var(--accent-300)]"
+                @change="rtmfProjectStore.setActive(Number(($event.target as HTMLSelectElement).value))"
+              >
+                <option value="" disabled>Select project…</option>
+                <option v-for="p in rtmfProjectStore.projects" :key="p.id" :value="p.id">{{ p.name }}</option>
+              </select>
+              <ChevronDown class="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            </div>
+          </div>
+        </div>
+
         <nav class="flex-1 p-3" :class="isCollapsed ? 'md:overflow-visible md:px-0 md:py-2' : ''">
           <div v-for="(group, gi) in visibleMenu" :key="group.id">
             <p
@@ -442,7 +485,7 @@ watch(() => visibleMenu.value, syncOpenMenus, { deep: true });
                     isCollapsed && isNodeActive(item) ? 'md:text-[var(--accent-700)] text-slate-700' : isNodeActive(item) ? 'text-slate-900' : 'text-slate-400 group-hover:text-[var(--accent-600)]'
                   ]"
                 />
-                <span class="flex-1" :class="isCollapsed ? 'md:hidden' : ''">{{ item.label }}</span>
+                <span class="flex-1 transition-colors" :class="[isCollapsed ? 'md:hidden' : '', isNodeActive(item) ? '' : 'group-hover:text-[var(--accent-700)]']">{{ item.label }}</span>
                 <ChevronDown
                   class="h-4 w-4 text-slate-400 transition-transform duration-200"
                   :class="[{ '-rotate-90': !openMenus[item.id] }, isCollapsed ? 'md:hidden' : '']"
@@ -473,7 +516,7 @@ watch(() => visibleMenu.value, syncOpenMenus, { deep: true });
                     isCollapsed && isActive(item.to) ? 'md:text-[var(--accent-700)] text-slate-700' : isActive(item.to) ? 'text-slate-900' : 'text-slate-400 group-hover:text-[var(--accent-600)]'
                   ]"
                 />
-                <span class="flex-1" :class="isCollapsed ? 'md:hidden' : ''">{{ item.label }}</span>
+                <span class="flex-1 transition-colors" :class="[isCollapsed ? 'md:hidden' : '', isActive(item.to) ? '' : 'group-hover:text-[var(--accent-700)]']">{{ item.label }}</span>
                 <span
                   v-if="isCollapsed"
                   class="pointer-events-none absolute left-full z-50 ml-2 hidden whitespace-nowrap rounded-md bg-slate-900 px-2 py-1 text-xs font-medium text-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100 md:block"

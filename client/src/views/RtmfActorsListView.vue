@@ -5,14 +5,18 @@ import { LayoutGrid, Plus } from "lucide-vue-next";
 import AdminLayout from "@/layouts/AdminLayout.vue";
 import { listRtmfActors } from "@/api/rtmf";
 import { useAuthStore } from "@/stores/auth";
+import { useRtmfProjectStore } from "@/stores/rtmfProject";
 import type { RtmfActor } from "@/types";
 
 const auth = useAuthStore();
 const router = useRouter();
+const projectStore = useRtmfProjectStore();
 const rows = ref<RtmfActor[]>([]);
 
 async function load() {
-  const r = await listRtmfActors();
+  const pid = projectStore.activeProjectId;
+  const params = pid ? `?project_id=${pid}` : "";
+  const r = await listRtmfActors(params);
   rows.value = r.data;
 }
 onMounted(load);
@@ -31,7 +35,7 @@ onMounted(load);
           <h1 class="page-title">Actors</h1>
           <p class="mt-1 text-sm text-slate-500">Roles / personas that interact with the frontends.</p>
         </div>
-        <button v-if="auth.isAdmin" class="flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-slate-800" @click="router.push('/admin/rtmf/actors/new')">
+        <button v-if="projectStore.canEdit" class="flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-slate-800" @click="router.push('/admin/rtmf/actors/new')">
           <Plus class="h-4 w-4" />Add Actor
         </button>
       </div>

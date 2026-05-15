@@ -212,12 +212,26 @@ class AuthController extends Controller
      */
     protected function userPayload($user): array
     {
+        $photoUrl = $user->photo_url ? url($user->photo_url) : null;
+
+        if (! $photoUrl) {
+            try {
+                $ext = \Illuminate\Support\Facades\DB::connection('mysql_external')
+                    ->table('User')
+                    ->where('email', $user->email)
+                    ->value('avatarUrl');
+                $photoUrl = $ext ?: null;
+            } catch (\Throwable) {
+                // external DB unavailable — skip
+            }
+        }
+
         return [
-            'id' => $user->id,
-            'email' => $user->email,
-            'name' => $user->name,
-            'photo_url' => $user->photo_url,
-            'role' => $user->role,
+            'id'        => $user->id,
+            'email'     => $user->email,
+            'name'      => $user->name,
+            'photo_url' => $photoUrl,
+            'role'      => $user->role,
         ];
     }
 }

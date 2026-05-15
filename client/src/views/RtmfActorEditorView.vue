@@ -6,11 +6,13 @@ import AdminLayout from "@/layouts/AdminLayout.vue";
 import { createRtmfActor, deleteRtmfActor, getRtmfActor, updateRtmfActor } from "@/api/rtmf";
 import { useConfirmDialog } from "@/composables/useConfirmDialog";
 import { useToast } from "@/composables/useToast";
+import { useRtmfProjectStore } from "@/stores/rtmfProject";
 
 const route = useRoute();
 const router = useRouter();
 const toast = useToast();
 const confirmDialog = useConfirmDialog();
+const projectStore = useRtmfProjectStore();
 
 const id = computed(() => Number(route.params.id || 0));
 const isEdit = computed(() => id.value > 0);
@@ -30,10 +32,10 @@ async function load() {
 }
 
 async function save() {
-  const payload = { name: name.value.trim(), description: description.value.trim() || null, sortOrder: sortOrder.value };
+  const base = { name: name.value.trim(), description: description.value.trim() || null, sortOrder: sortOrder.value };
   try {
-    if (isEdit.value) { await updateRtmfActor(id.value, payload); toast.success("Actor updated"); }
-    else { await createRtmfActor(payload); toast.success("Actor created"); }
+    if (isEdit.value) { await updateRtmfActor(id.value, base); toast.success("Actor updated"); }
+    else { await createRtmfActor({ ...base, projectId: projectStore.activeProjectId ?? undefined }); toast.success("Actor created"); }
     router.push("/admin/rtmf/actors");
   } catch (e) { toast.error("Save failed", e instanceof Error ? e.message : ""); }
 }

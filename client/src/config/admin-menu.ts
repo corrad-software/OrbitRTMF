@@ -2,23 +2,26 @@ import type { Component } from "vue";
 import {
   AppWindow,
   BookOpen,
-  Bot,
+  Bug,
   Cable,
-  Cog,
   Database,
-  Eye,
   FileSpreadsheet,
+  FileInput,
+  FileClock,
   FileText,
+  FolderKanban,
   Gauge,
+  GitBranch,
+  GitPullRequest,
   Image,
+  BarChart2,
   LayoutDashboard,
   LayoutGrid,
   Layers,
   Link2,
-  ListChecks,
-  Mail,
   Menu,
   PieChart,
+  ScrollText,
   Settings,
   Shield,
   Users,
@@ -33,6 +36,7 @@ export type MenuNode = {
 
 export type MenuItemDef = MenuNode & {
   icon: Component;
+  adminOnly?: boolean;
 };
 
 export type MenuGroupDef = {
@@ -57,7 +61,7 @@ export const DEFAULT_MENU: MenuGroupDef[] = [
     id: "dashboard",
     label: "",
     items: [
-      { id: "main-dashboard", label: "Dashboard", to: "/admin", icon: Gauge },
+      { id: "main-dashboard", label: "My Task", to: "/admin", icon: Gauge },
     ],
   },
   {
@@ -98,114 +102,27 @@ export const DEFAULT_MENU: MenuGroupDef[] = [
     ],
   },
   {
-    id: "rtmf",
-    label: "Page Catalog",
+    id: "rtmf-setup",
+    label: "Setup",
     items: [
-      { id: "rtmf-dashboard", label: "Dashboard", to: "/admin/rtmf/dashboard", icon: LayoutDashboard },
-      { id: "rtmf-frontends", label: "Pages", to: "/admin/rtmf/frontends", icon: AppWindow },
-      { id: "rtmf-modules", label: "Module", to: "/admin/rtmf/modules", icon: Layers },
-      { id: "rtmf-actors", label: "Actor", to: "/admin/rtmf/actors", icon: Users },
-      { id: "rtmf-export", label: "Export", to: "/admin/rtmf/export", icon: FileSpreadsheet },
-    ],
-  },
-  {
-    id: "core-platform",
-    label: "Core Platform",
-    items: [
-      {
-        id: "identity-access",
-        label: "Identity & Access",
-        to: "/admin/platform/identity",
-        icon: Shield,
-        children: [
-          { id: "platform-auth", label: "Authentication", to: "/admin/platform/identity/users",
-            children: [
-              { id: "platform-users-all", label: "All Users", to: "/admin/platform/identity/users" },
-              { id: "platform-users-new", label: "Add User", to: "/admin/platform/identity/users/new" },
-            ],
-          },
-          { id: "platform-rbac", label: "RBAC", to: "/admin/platform/identity/roles" },
-          { id: "platform-tokens", label: "Token Management", to: "/admin/platform/identity/tokens" },
-        ],
-      },
-      {
-        id: "observability",
-        label: "Observability",
-        to: "/admin/platform/observability",
-        icon: Eye,
-        children: [
-          { id: "platform-audit-trail", label: "Audit Trail", to: "/admin/platform/observability/audit-trail" },
-          { id: "platform-activity-log", label: "Activity Log", to: "/admin/platform/observability/activity-log" },
-          { id: "platform-logging", label: "Logging", to: "/admin/platform/observability/logging" },
-          { id: "platform-error-tracking", label: "Error Tracking", to: "/admin/platform/observability/errors" },
-          { id: "platform-monitoring", label: "Monitoring", to: "/admin/platform/observability/monitoring" },
-        ],
-      },
-      {
-        id: "queue",
-        label: "Queue",
-        to: "/admin/platform/queue",
-        icon: ListChecks,
-        children: [
-          { id: "platform-queue-dashboard", label: "Dashboard", to: "/admin/platform/queue" },
-          { id: "platform-queue-failed", label: "Failed Jobs", to: "/admin/platform/queue/failed" },
-          { id: "platform-queue-scheduled", label: "Scheduled Jobs", to: "/admin/platform/queue/scheduled" },
-        ],
-      },
-      {
-        id: "messaging",
-        label: "Messaging",
-        to: "/admin/platform/messaging",
-        icon: Mail,
-        children: [
-          { id: "platform-event-bus", label: "Event Bus", to: "/admin/platform/messaging/event-bus" },
-          { id: "platform-notifications", label: "Notifications", to: "/admin/platform/messaging/notifications" },
-        ],
-      },
-      {
-        id: "system-management",
-        label: "System Management",
-        to: "/admin/platform/system",
-        icon: Cog,
-        children: [
-          { id: "platform-scheduler", label: "Scheduler", to: "/admin/platform/system/scheduler" },
-          { id: "platform-config", label: "Configuration", to: "/admin/platform/system/configuration" },
-          { id: "platform-feature-flags", label: "Feature Flags", to: "/admin/platform/system/feature-flags" },
-          { id: "platform-file-media", label: "File / Media", to: "/admin/platform/storage/media" },
-        ],
-      },
-      {
-        id: "api-gateway",
-        label: "API Gateway",
-        to: "/admin/platform/gateway",
-        icon: Cable,
-        children: [
-          { id: "platform-gateway-routes", label: "Routes", to: "/admin/platform/gateway/routes" },
-          { id: "platform-gateway-upstreams", label: "Upstreams", to: "/admin/platform/gateway/upstreams" },
-          { id: "platform-gateway-consumers", label: "Consumers", to: "/admin/platform/gateway/consumers" },
-          { id: "platform-gateway-plugins", label: "Plugins", to: "/admin/platform/gateway/plugins" },
-          { id: "platform-gateway-ssl", label: "SSL Certificates", to: "/admin/platform/gateway/ssl" },
-          { id: "platform-webhooks", label: "Webhooks", to: "/admin/platform/gateway/webhooks" },
-        ],
-      },
-      {
-        id: "ai-integration",
-        label: "AI Integration",
-        to: "/admin/platform/ai",
-        icon: Bot,
-        children: [
-          { id: "platform-ai-providers", label: "AI Providers", to: "/admin/platform/ai/providers" },
-          { id: "platform-ai-models", label: "AI Models", to: "/admin/platform/ai/models" },
-          { id: "platform-ai-prompts", label: "Prompt Templates", to: "/admin/platform/ai/prompts" },
-          { id: "platform-ai-usage", label: "AI Usage & Billing", to: "/admin/platform/ai/usage" },
-        ],
-      },
+      { id: "rtmf-projects", label: "Projects", to: "/admin/rtmf/projects", icon: FolderKanban },
     ],
   },
   {
     id: "administration",
     label: "Administration",
     items: [
+      {
+        id: "platform-auth",
+        label: "Authentication",
+        to: "/admin/platform/identity/users",
+        icon: Shield,
+        children: [
+          { id: "platform-users-all", label: "All Users", to: "/admin/platform/identity/users" },
+          { id: "platform-users-new", label: "Add User", to: "/admin/platform/identity/users/new" },
+        ],
+      },
+      { id: "platform-rbac", label: "RBAC", to: "/admin/platform/identity/roles", icon: PieChart },
       { id: "menus", label: "Menus", to: "/admin/menus", icon: Menu },
       {
         id: "settings",
@@ -220,9 +137,39 @@ export const DEFAULT_MENU: MenuGroupDef[] = [
     ],
   },
   {
+    id: "rtmf",
+    label: "Page Catalog",
+    items: [
+      { id: "rtmf-dashboard",        label: "Dashboard",      to: "/admin/rtmf/dashboard",    icon: LayoutDashboard },
+      { id: "rtmf-frontends", label: "Pages", to: "/admin/rtmf/frontends", icon: AppWindow },
+      { id: "rtmf-modules", label: "Module", to: "/admin/rtmf/modules", icon: Layers },
+      { id: "rtmf-actors", label: "Actor", to: "/admin/rtmf/actors", icon: Users },
+      { id: "rtmf-scenarios", label: "Flow Scenarios", to: "/admin/rtmf/scenarios", icon: GitBranch },
+    ],
+  },
+  {
+    id: "tools",
+    label: "Tools",
+    items: [
+      { id: "rtmf-import",      label: "Import",    to: "/admin/rtmf/import",      icon: FileInput },
+      { id: "rtmf-export",      label: "Export",    to: "/admin/rtmf/export",      icon: FileSpreadsheet },
+      { id: "tools-changelog",  label: "Changelog", to: "/admin/tools/changelog",  icon: ScrollText, adminOnly: true },
+    ],
+  },
+  {
+    id: "defect-tracking",
+    label: "Project Tracker",
+    items: [
+      { id: "defect-reporting", label: "Defects",              to: "/admin/defects",          icon: Bug },
+      { id: "cr-tracking",      label: "Change Request (CR)",  to: "/admin/cr",               icon: GitPullRequest },
+      { id: "catalog-tracking", label: "Page Catalog",         to: "/admin/catalog-tracking", icon: BarChart2 },
+    ],
+  },
+  {
     id: "development",
     label: "Development",
     items: [
+      { id: "changelog", label: "Changelog", to: "/admin/development/changelog", icon: FileClock },
       { id: "developers-guide", label: "Developers Guide", to: "/admin/development/developers-guide", icon: BookOpen },
       { id: "database-schema", label: "Database Schema", to: "/admin/development/database-schema", icon: Database },
       { id: "api-explorer", label: "API Explorer", to: "/admin/development/api-explorer", icon: Cable },

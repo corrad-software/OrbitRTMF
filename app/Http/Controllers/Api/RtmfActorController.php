@@ -6,18 +6,26 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreRtmfActorRequest;
 use App\Http\Requests\UpdateRtmfActorRequest;
 use App\Http\Traits\ApiResponse;
+use App\Http\Traits\ChecksRtmfProjectRole;
 use App\Models\RtmfActor;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class RtmfActorController extends Controller
 {
-    use ApiResponse;
+    use ApiResponse, ChecksRtmfProjectRole;
 
     public function index(Request $request): JsonResponse
     {
         $q = $request->input('q');
+        $projectId = $request->integer('project_id') ?: null;
+
         $query = RtmfActor::query()->withCount('frontends');
+
+        if ($projectId) {
+            $query->where('project_id', $projectId);
+        }
+
         if ($q) {
             $query->where('name', 'like', "%{$q}%");
         }
@@ -28,6 +36,9 @@ class RtmfActorController extends Controller
 
     public function store(StoreRtmfActorRequest $request): JsonResponse
     {
+        $projectId = $request->integer('project_id') ?: null;
+        if ($deny = $this->denyIfCannotEdit($request, $projectId)) return $deny;
+
         $row = RtmfActor::create($request->validated());
 
         return $this->sendOk($row);
@@ -49,6 +60,8 @@ class RtmfActorController extends Controller
         if (! $row) {
             return $this->sendError(404, 'NOT_FOUND', 'Actor not found');
         }
+        if ($deny = $this->denyIfCannotEdit($request, $row->project_id)) return $deny;
+
         $row->update($request->validated());
 
         return $this->sendOk($row);
@@ -60,6 +73,8 @@ class RtmfActorController extends Controller
         if (! $row) {
             return $this->sendError(404, 'NOT_FOUND', 'Actor not found');
         }
+        if ($deny = $this->denyIfCannotEdit(request(), $row->project_id)) return $deny;
+
         if ($row->frontends_count > 0) {
             return $this->sendError(422, 'IN_USE', "Actor is referenced by {$row->frontends_count} frontend entries.");
         }

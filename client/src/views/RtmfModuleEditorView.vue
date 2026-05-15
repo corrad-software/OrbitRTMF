@@ -23,11 +23,13 @@ import {
 import type { RtmfModulePhoto, RtmfSubModule, RtmfSubModulePhoto } from "@/types";
 import { useConfirmDialog } from "@/composables/useConfirmDialog";
 import { useToast } from "@/composables/useToast";
+import { useRtmfProjectStore } from "@/stores/rtmfProject";
 
 const route = useRoute();
 const router = useRouter();
 const toast = useToast();
 const confirmDialog = useConfirmDialog();
+const projectStore = useRtmfProjectStore();
 
 const id = computed(() => Number(route.params.id || 0));
 const isEdit = computed(() => id.value > 0);
@@ -367,15 +369,16 @@ async function removeModulePhoto(photoId: number) {
 }
 
 async function save() {
-  const payload = {
+  const base = {
     code: code.value.trim(),
     name: name.value.trim(),
     description: description.value.trim() || null,
     sortOrder: sortOrder.value,
   };
+  const payload = isEdit.value ? base : { ...base, projectId: projectStore.activeProjectId ?? undefined };
   try {
     if (isEdit.value) {
-      await updateRtmfModule(id.value, payload);
+      await updateRtmfModule(id.value, base);
       toast.success("Module updated");
     } else {
       const r = await createRtmfModule(payload);

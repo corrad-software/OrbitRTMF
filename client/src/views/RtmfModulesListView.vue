@@ -5,15 +5,19 @@ import { LayoutGrid, Plus } from "lucide-vue-next";
 import AdminLayout from "@/layouts/AdminLayout.vue";
 import { listRtmfModules, listRtmfSubModules } from "@/api/rtmf";
 import { useAuthStore } from "@/stores/auth";
+import { useRtmfProjectStore } from "@/stores/rtmfProject";
 import type { RtmfModule, RtmfSubModule } from "@/types";
 
 const auth = useAuthStore();
 const router = useRouter();
+const projectStore = useRtmfProjectStore();
 const rows = ref<RtmfModule[]>([]);
 const subModulesMap = ref<Record<number, RtmfSubModule[]>>({});
 
 async function load() {
-  const r = await listRtmfModules();
+  const pid = projectStore.activeProjectId;
+  const params = pid ? `?project_id=${pid}` : "";
+  const r = await listRtmfModules(params);
   rows.value = r.data;
   await Promise.all(
     r.data.map(async (m) => {
@@ -40,7 +44,7 @@ onMounted(load);
           <p class="mt-1 text-sm text-slate-500">Top-level registration modules and their sub-modules.</p>
         </div>
         <button
-          v-if="auth.isAdmin"
+          v-if="projectStore.canEdit"
           class="flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-1.5 text-sm font-medium text-white shadow-sm hover:bg-slate-800"
           @click="router.push('/admin/rtmf/modules/new')"
         >

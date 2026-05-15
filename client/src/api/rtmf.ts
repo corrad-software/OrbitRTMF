@@ -2,6 +2,7 @@ import { apiRequest } from "./client";
 import type {
   RtmfActor,
   RtmfAttachment,
+  RtmfScenarioAttachment,
   RtmfDashboardSummary,
   RtmfFrontend,
   RtmfFrontendInput,
@@ -12,6 +13,12 @@ import type {
   RtmfFrontendScenarioRow,
   RtmfFrontendScenarioRowInput,
   RtmfModule,
+  RtmfScenario,
+  RtmfScenarioInput,
+  RtmfScenarioStep,
+  RtmfScenarioStepInput,
+  RtmfScenarioStepLink,
+  RtmfScenarioStepLinkInput,
   RtmfModulePhoto,
   RtmfSnapshotStatus,
   RtmfSubModule,
@@ -21,8 +28,8 @@ import type {
 } from "@/types";
 
 // ── Dashboard ──
-export async function fetchRtmfDashboard() {
-  return apiRequest<{ data: RtmfDashboardSummary }>("/api/rtmf/dashboard");
+export async function fetchRtmfDashboard(params = "") {
+  return apiRequest<{ data: RtmfDashboardSummary }>(`/api/rtmf/dashboard${params}`);
 }
 
 // ── Frontends ──

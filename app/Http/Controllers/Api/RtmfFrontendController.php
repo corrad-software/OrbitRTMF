@@ -4,10 +4,16 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreRtmfFrontendRequest;
+use App\Http\Requests\StoreRtmfImportRequest;
 use App\Http\Requests\UpdateRtmfFrontendRequest;
 use App\Http\Traits\ApiResponse;
+use App\Http\Traits\ChecksRtmfProjectRole;
+use App\Models\RtmfActor;
 use App\Models\RtmfFrontend;
-
+use App\Models\RtmfFrontendApiEndpoint;
+use App\Models\RtmfFrontendItem;
+use App\Models\RtmfModule;
+use App\Models\RtmfSubModule;
 use App\Services\VueSnapshotService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -15,7 +21,7 @@ use Illuminate\Support\Facades\File;
 
 class RtmfFrontendController extends Controller
 {
-    use ApiResponse;
+    use ApiResponse, ChecksRtmfProjectRole;
 
     public function index(Request $request): JsonResponse
     {
@@ -33,13 +39,20 @@ class RtmfFrontendController extends Controller
             $sortBy = 'spec_id';
         }
 
+        $projectId = $request->integer('project_id') ?: null;
+
         $query = RtmfFrontend::query()->with([
             'module:id,code,name',
             'subModule:id,module_id,code,name',
             'actors:id,name',
             'linksFrom:id,spec_id,title',
             'linksTo:id,spec_id,title',
+            'feedbacks:id,rtmf_frontend_id,role,status',
         ]);
+
+        if ($projectId) {
+            $query->whereHas('module', fn ($q) => $q->where('project_id', $projectId));
+        }
 
         if ($moduleId) {
             $query->where('module_id', $moduleId);
@@ -80,6 +93,9 @@ class RtmfFrontendController extends Controller
     public function store(StoreRtmfFrontendRequest $request): JsonResponse
     {
         $data = $request->validated();
+        $module = RtmfModule::find($data['module_id'] ?? null);
+        if ($deny = $this->denyIfCannotEdit($request, $module?->project_id)) return $deny;
+
         $actorIds = $data['actor_ids'] ?? [];
         $fromIds = $data['from_ids'] ?? [];
         $toIds = $data['to_ids'] ?? [];
@@ -112,6 +128,9 @@ class RtmfFrontendController extends Controller
         if (! $row) {
             return $this->sendError(404, 'NOT_FOUND', 'RTMF frontend not found');
         }
+
+        $module = RtmfModule::find($row->module_id);
+        if ($deny = $this->denyIfCannotEdit($request, $module?->project_id)) return $deny;
 
         $data = $request->validated();
         $hasActors = array_key_exists('actor_ids', $data);
@@ -273,8 +292,108 @@ class RtmfFrontendController extends Controller
 
     public function destroy(int $id): JsonResponse
     {
-        RtmfFrontend::where('id', $id)->delete();
+        $row = RtmfFrontend::find($id);
+        if (! $row) {
+            return $this->sendError(404, 'NOT_FOUND', 'RTMF frontend not found');
+        }
+
+        $module = RtmfModule::find($row->module_id);
+        if ($deny = $this->denyIfCannotEdit(request(), $module?->project_id)) return $deny;
+
+        $row->delete();
 
         return $this->sendOk(['success' => true]);
+    }
+
+    public function import(StoreRtmfImportRequest $request): JsonResponse
+    {
+        $data = $request->validated();
+
+        $module = RtmfModule::firstOrCreate(
+            ['code' => $data['module']['code']],
+            ['name' => $data['module']['name'], 'sort_order' => $data['module']['sort_order'] ?? 0],
+        );
+
+        $subModule = RtmfSubModule::firstOrCreate(
+            ['module_id' => $module->id, 'code' => $data['sub_module']['code']],
+            ['name' => $data['sub_module']['name'], 'sort_order' => $data['sub_module']['sort_order'] ?? 0],
+        );
+
+        $results = [];
+
+        foreach ($data['frontends'] as $i => $fe) {
+            $actorIds = [];
+            foreach ($fe['actors'] ?? [] as $name) {
+                $actorIds[] = RtmfActor::firstOrCreate(['name' => $name])->id;
+            }
+
+            $exists = RtmfFrontend::where('spec_id', $fe['spec_id'])->exists();
+
+            $frontend = RtmfFrontend::updateOrCreate(
+                ['spec_id' => $fe['spec_id']],
+                [
+                    'module_id'               => $module->id,
+                    'sub_module_id'           => $subModule->id,
+                    'tab_code'                => $fe['tab_code'] ?? null,
+                    'vue_path'                => $fe['vue_path'] ?? null,
+                    'title'                   => $fe['title'],
+                    'business_requirement'    => $fe['business_requirement'] ?? null,
+                    'stakeholder_requirement' => $fe['stakeholder_requirement'] ?? null,
+                    'description'             => $fe['description'] ?? null,
+                    'sort_order'              => ($i + 1) * 10,
+                ],
+            );
+
+            $frontend->actors()->sync($actorIds);
+
+            $itemCount = 0;
+            if (! empty($fe['items'])) {
+                RtmfFrontendItem::where('rtmf_frontend_id', $frontend->id)->delete();
+                foreach ($fe['items'] as $j => $item) {
+                    RtmfFrontendItem::create([
+                        'rtmf_frontend_id' => $frontend->id,
+                        'sort_order'       => $item['sort_order'] ?? $j,
+                        'id_fr'            => $item['id_fr'] ?? null,
+                        'type'             => $item['type'] ?? null,
+                        'label'            => $item['label'] ?? null,
+                        'condition'        => $item['condition'] ?? null,
+                        'validation'       => $item['validation'] ?? null,
+                        'mandatory'        => $item['mandatory'] ?? false,
+                        'screen_name'      => $item['screen_name'] ?? null,
+                        'table_fieldname'  => $item['table_fieldname'] ?? null,
+                        'status'           => $item['status'] ?? 'missing',
+                    ]);
+                    $itemCount++;
+                }
+            }
+
+            $endpointCount = 0;
+            if (! empty($fe['api_endpoints'])) {
+                RtmfFrontendApiEndpoint::where('rtmf_frontend_id', $frontend->id)->delete();
+                foreach ($fe['api_endpoints'] as $k => $ep) {
+                    RtmfFrontendApiEndpoint::create([
+                        'rtmf_frontend_id' => $frontend->id,
+                        'method'           => $ep['method'] ?? 'GET',
+                        'endpoint'         => $ep['endpoint'] ?? '',
+                        'description'      => $ep['description'] ?? null,
+                        'sort_order'       => $k,
+                    ]);
+                    $endpointCount++;
+                }
+            }
+
+            $results[] = [
+                'spec_id'   => $fe['spec_id'],
+                'action'    => $exists ? 'updated' : 'created',
+                'items'     => $itemCount,
+                'endpoints' => $endpointCount,
+            ];
+        }
+
+        return $this->sendOk([
+            'module'     => "{$module->code} — {$module->name}",
+            'sub_module' => "{$subModule->code} — {$subModule->name}",
+            'frontends'  => $results,
+        ]);
     }
 }

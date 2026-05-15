@@ -6,12 +6,14 @@ import { ChevronLeft, ChevronRight, GitMerge, LayoutGrid, Plus, Search } from "l
 import AdminLayout from "@/layouts/AdminLayout.vue";
 import { listRtmfFrontends, listRtmfModules } from "@/api/rtmf";
 import { useAuthStore } from "@/stores/auth";
+import { useRtmfProjectStore } from "@/stores/rtmfProject";
 import { useToast } from "@/composables/useToast";
 import type { RtmfFrontend, RtmfModule } from "@/types";
 
 const auth = useAuthStore();
 const router = useRouter();
 const toast = useToast();
+const projectStore = useRtmfProjectStore();
 
 const rows = ref<RtmfFrontend[]>([]);
 const modules = ref<RtmfModule[]>([]);
@@ -32,6 +34,8 @@ async function load() {
   if (q.value) params.set("q", q.value);
   if (moduleFilter.value) params.set("module_id", String(moduleFilter.value));
   if (doneFilter.value !== "") params.set("is_done", doneFilter.value);
+  const pid = projectStore.activeProjectId;
+  if (pid) params.set("project_id", String(pid));
   const response = await listRtmfFrontends(`?${params.toString()}`);
   rows.value = response.data;
   total.value = Number(response.meta?.total ?? response.data.length);
@@ -44,7 +48,9 @@ function resetAndLoad() {
 
 onMounted(async () => {
   try {
-    const modResp = await listRtmfModules();
+    const pid = projectStore.activeProjectId;
+    const modParams = pid ? `?project_id=${pid}` : "";
+    const modResp = await listRtmfModules(modParams);
     modules.value = modResp.data;
     await load();
   } catch (e) {
@@ -95,7 +101,7 @@ onUnmounted(() => document.removeEventListener("click", closePopover));
           <p class="mt-1 text-sm text-slate-500">Requirements traceability matrix — all frontend spec entries.</p>
         </div>
         <button
-          v-if="auth.isAdmin"
+          v-if="projectStore.canEdit"
           class="flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-slate-800"
           @click="router.push('/admin/rtmf/frontends/new')"
         >
@@ -154,6 +160,10 @@ onUnmounted(() => document.removeEventListener("click", closePopover));
                 <th class="whitespace-nowrap px-3 py-2 text-xs font-semibold uppercase tracking-wider text-slate-500">Title</th>
                 <th class="whitespace-nowrap px-3 py-2 text-xs font-semibold uppercase tracking-wider text-slate-500">Module / Sub-module</th>
                 <th class="whitespace-nowrap px-3 py-2 text-center text-xs font-semibold uppercase tracking-wider text-slate-500">Done</th>
+                <th class="whitespace-nowrap px-3 py-2 text-center text-xs font-semibold uppercase tracking-wider text-violet-500">BA</th>
+                <th class="whitespace-nowrap px-3 py-2 text-center text-xs font-semibold uppercase tracking-wider text-sky-500">QA</th>
+                <th class="whitespace-nowrap px-3 py-2 text-center text-xs font-semibold uppercase tracking-wider text-amber-500">Tech</th>
+                <th class="whitespace-nowrap px-3 py-2 text-center text-xs font-semibold uppercase tracking-wider text-green-600">Dev</th>
                 <th class="whitespace-nowrap px-3 py-2 text-center text-xs font-semibold uppercase tracking-wider text-slate-500">Assigned</th>
                 <th class="whitespace-nowrap px-3 py-2 text-center text-xs font-semibold uppercase tracking-wider text-slate-500">Links</th>
               </tr>
@@ -186,6 +196,28 @@ onUnmounted(() => document.removeEventListener("click", closePopover));
                     <svg viewBox="0 0 12 12" class="h-2.5 w-2.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                       <polyline points="2,6 5,9 10,3" />
                     </svg>
+                  </span>
+                </td>
+
+                <!-- BA / QA / Technical review -->
+                <td
+                  v-for="(role, color) in [['business_analyst','violet'],['qa','sky'],['technical','amber'],['developer','green']]"
+                  :key="role"
+                  class="whitespace-nowrap px-3 py-2 text-center"
+                  @click.stop
+                >
+                  <span
+                    :title="(item.feedbacks?.find(f => f.role === role)?. status ?? 'open')"
+                    class="inline-flex h-5 w-5 items-center justify-center rounded-full text-[10px] font-bold"
+                    :class="{
+                      'bg-emerald-100 text-emerald-600': item.feedbacks?.find(f => f.role === role)?.status === 'approved',
+                      'bg-blue-100 text-blue-600':       item.feedbacks?.find(f => f.role === role)?.status === 'reviewed',
+                      'bg-slate-100 text-slate-300':     !item.feedbacks?.find(f => f.role === role) || item.feedbacks?.find(f => f.role === role)?.status === 'open',
+                    }"
+                  >
+                    <svg v-if="item.feedbacks?.find(f => f.role === role)?.status === 'approved'" viewBox="0 0 12 12" class="h-2.5 w-2.5" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3" /></svg>
+                    <svg v-else-if="item.feedbacks?.find(f => f.role === role)?.status === 'reviewed'" viewBox="0 0 12 12" class="h-2.5 w-2.5" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3" /></svg>
+                    <svg v-else viewBox="0 0 12 12" class="h-2.5 w-2.5" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="3" x2="6" y2="9" /><line x1="3" y1="6" x2="9" y2="6" /></svg>
                   </span>
                 </td>
 
@@ -239,7 +271,7 @@ onUnmounted(() => document.removeEventListener("click", closePopover));
                 </td>
               </tr>
               <tr v-if="rows.length === 0">
-                <td colspan="6" class="px-4 py-6 text-center text-sm text-slate-400">No frontend entries found.</td>
+                <td colspan="10" class="px-4 py-6 text-center text-sm text-slate-400">No frontend entries found.</td>
               </tr>
             </tbody>
           </table>

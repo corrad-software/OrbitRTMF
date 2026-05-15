@@ -20,10 +20,20 @@ import RtmfModuleEditorView from "@/views/RtmfModuleEditorView.vue";
 import RtmfActorsListView from "@/views/RtmfActorsListView.vue";
 import RtmfActorEditorView from "@/views/RtmfActorEditorView.vue";
 import RtmfExportView from "@/views/RtmfExportView.vue";
+import RtmfImportView from "@/views/RtmfImportView.vue";
+import RtmfScenariosListView from "@/views/RtmfScenariosListView.vue";
+import RtmfScenarioEditorView from "@/views/RtmfScenarioEditorView.vue";
+import RtmfProjectsView from "@/views/RtmfProjectsView.vue";
+import RtmfProjectMembersView from "@/views/RtmfProjectMembersView.vue";
+import DefectReportingView from "@/views/DefectReportingView.vue";
+import CrTrackingView from "@/views/CrTrackingView.vue";
+import PageCatalogTrackingView from "@/views/PageCatalogTrackingView.vue";
 
 import CategoriesListView from "@/views/CategoriesListView.vue";
 import CategoryEditorView from "@/views/CategoryEditorView.vue";
 import DatabaseSchemaView from "@/views/DatabaseSchemaView.vue";
+import ChangelogView from "@/views/ChangelogView.vue";
+import ToolsChangelogView from "@/views/ToolsChangelogView.vue";
 import DevelopersGuideView from "@/views/DevelopersGuideView.vue";
 import ApiManagementView from "@/views/ApiManagementView.vue";
 import MenusView from "@/views/MenusView.vue";
@@ -89,7 +99,7 @@ const router = createRouter({
   history: createWebHistory(),
   routes: [
     { path: "/admin/login", name: "login", component: LoginView, meta: { guestOnly: true, title: "Login" } },
-    { path: "/admin", name: "main-dashboard", component: MainDashboardView, meta: { requiresAuth: true, title: "Main Dashboard" } },
+    { path: "/admin", name: "main-dashboard", component: MainDashboardView, meta: { requiresAuth: true, title: "My Task" } },
     { path: "/admin/portal/dashboard", name: "dashboard", component: DashboardView, meta: { requiresAuth: true, title: "Dashboard" } },
     { path: "/admin/posts", name: "posts", component: PostsListView, meta: { requiresAuth: true, title: "Posts" } },
     { path: "/admin/posts/new", name: "post-create", component: PostEditorView, meta: { requiresAuth: true, title: "New Post" } },
@@ -106,6 +116,8 @@ const router = createRouter({
     { path: "/admin/webfront-settings", name: "webfront-settings", component: WebfrontSettingsView, meta: { requiresAuth: true, title: "Settings" } },
     { path: "/admin/menus", name: "menus", component: MenusView, meta: { requiresAuth: true, title: "Menus" } },
     { path: "/admin/rtmf", redirect: "/admin/rtmf/dashboard" },
+    { path: "/admin/rtmf/projects", name: "rtmf-projects", component: RtmfProjectsView, meta: { requiresAuth: true, title: "Projects — Page Catalog" } },
+    { path: "/admin/rtmf/projects/:id/members", name: "rtmf-project-members", component: RtmfProjectMembersView, meta: { requiresAuth: true, title: "Project Members" } },
     { path: "/admin/rtmf/dashboard", name: "rtmf-dashboard", component: RtmfDashboardView, meta: { requiresAuth: true, title: "Page Catalog Dashboard" } },
     { path: "/admin/rtmf/frontends", name: "rtmf-frontends", component: RtmfListView, meta: { requiresAuth: true, title: "Pages" } },
     { path: "/admin/rtmf/frontends/new", name: "rtmf-frontend-create", component: RtmfEditorView, meta: { requiresAuth: true, title: "New Page" } },
@@ -117,6 +129,14 @@ const router = createRouter({
     { path: "/admin/rtmf/actors/new", name: "rtmf-actor-create", component: RtmfActorEditorView, meta: { requiresAuth: true, title: "New Actor" } },
     { path: "/admin/rtmf/actors/:id", name: "rtmf-actor-edit", component: RtmfActorEditorView, meta: { requiresAuth: true, title: "Edit Actor" } },
     { path: "/admin/rtmf/export", name: "rtmf-export", component: RtmfExportView, meta: { requiresAuth: true, title: "Export" } },
+    { path: "/admin/rtmf/import", name: "rtmf-import", component: RtmfImportView, meta: { requiresAuth: true, title: "Import" } },
+    { path: "/admin/rtmf/scenarios", name: "rtmf-scenarios", component: RtmfScenariosListView, meta: { requiresAuth: true, title: "Flow Scenarios — RTMF" } },
+    { path: "/admin/rtmf/scenarios/new", name: "rtmf-scenario-create", component: RtmfScenarioEditorView, meta: { requiresAuth: true, title: "New Scenario — RTMF" } },
+    { path: "/admin/rtmf/scenarios/:id", name: "rtmf-scenario-edit", component: RtmfScenarioEditorView, meta: { requiresAuth: true, title: "Edit Scenario — RTMF" } },
+
+    { path: "/admin/defects", name: "defect-reporting", component: DefectReportingView, meta: { requiresAuth: true, title: "Defect Reporting" } },
+    { path: "/admin/cr",      name: "cr-tracking",      component: CrTrackingView,      meta: { requiresAuth: true, title: "CR Tracking" } },
+    { path: "/admin/catalog-tracking", name: "catalog-tracking", component: PageCatalogTrackingView, meta: { requiresAuth: true, title: "Page Catalog Tracking" } },
 
     { path: "/admin/rtmf-frontends", redirect: "/admin/rtmf/frontends" },
     { path: "/admin/rtmf-frontends/new", redirect: "/admin/rtmf/frontends/new" },
@@ -124,6 +144,8 @@ const router = createRouter({
     { path: "/admin/kitchen-sink", name: "kitchen-sink", component: KitchenSinkView, meta: { requiresAuth: true, title: "Kitchen Sink" } },
     { path: "/admin/kitchen-sink/forms", name: "kitchen-forms", component: KitchenFormsView, meta: { requiresAuth: true, title: "Forms" } },
     { path: "/admin/kitchen-sink/charts", name: "kitchen-charts", component: KitchenChartsView, meta: { requiresAuth: true, title: "Charts" } },
+    { path: "/admin/development/changelog", name: "changelog", component: ChangelogView, meta: { requiresAuth: true, title: "Changelog" } },
+    { path: "/admin/tools/changelog", name: "tools-changelog", component: ToolsChangelogView, meta: { requiresAuth: true, requiresAdmin: true, title: "Changelog" } },
     { path: "/admin/development/developers-guide", name: "developers-guide", component: DevelopersGuideView, meta: { requiresAuth: true, title: "Developers Guide" } },
     { path: "/admin/development/database-schema", name: "database-schema", component: DatabaseSchemaView, meta: { requiresAuth: true, title: "Database Schema" } },
     { path: "/admin/development/api-explorer", name: "api-explorer", component: ApiManagementView, meta: { requiresAuth: true, title: "API Explorer" } },
@@ -234,6 +256,10 @@ router.beforeEach(async (to) => {
   }
 
   if (to.meta.guestOnly && auth.isAuthenticated) {
+    return { name: "main-dashboard" };
+  }
+
+  if (to.meta.requiresAdmin && !auth.isAdmin) {
     return { name: "main-dashboard" };
   }
 

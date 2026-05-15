@@ -11,7 +11,7 @@ class RtmfModule extends Model
 {
     use SoftDeletes, Auditable;
 
-    protected $fillable = ['code', 'name', 'description', 'sort_order'];
+    protected $fillable = ['project_id', 'code', 'name', 'description', 'sort_order'];
 
     protected function casts(): array
     {

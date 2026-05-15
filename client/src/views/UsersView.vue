@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 import {
   Users,
   Plus,
@@ -8,6 +8,8 @@ import {
   CheckCircle2,
   XCircle,
   Globe,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-vue-next";
 
 import AdminLayout from "@/layouts/AdminLayout.vue";
@@ -16,10 +18,27 @@ import { useConfirmDialog } from "@/composables/useConfirmDialog";
 import { useToast } from "@/composables/useToast";
 import type { UserDetail, ExternalUser } from "@/types";
 
+const PAGE_SIZE = 10;
+
 const users = ref<UserDetail[]>([]);
 const externalUsers = ref<ExternalUser[]>([]);
-const confirmDialog = useConfirmDialog();
+const usersPage = ref(1);
+const extPage = ref(1);
+const { confirm } = useConfirmDialog();
 const toast = useToast();
+
+const usersPageCount = computed(() => Math.max(1, Math.ceil(users.value.length / PAGE_SIZE)));
+const extPageCount = computed(() => Math.max(1, Math.ceil(externalUsers.value.length / PAGE_SIZE)));
+
+const pagedUsers = computed(() => {
+  const start = (usersPage.value - 1) * PAGE_SIZE;
+  return users.value.slice(start, start + PAGE_SIZE);
+});
+
+const pagedExtUsers = computed(() => {
+  const start = (extPage.value - 1) * PAGE_SIZE;
+  return externalUsers.value.slice(start, start + PAGE_SIZE);
+});
 
 async function load() {
   // Load independently: /api/external/users uses MySQL testagent — if it fails, local PostgreSQL
@@ -50,7 +69,7 @@ async function load() {
 }
 
 async function remove(id: number) {
-  const allowed = await confirmDialog.confirm({
+  const allowed = await confirm({
     title: "Delete user?",
     message: "This action cannot be undone.",
     confirmText: "Delete",
@@ -89,6 +108,7 @@ onMounted(load);
         <div class="flex items-center gap-2 border-b border-slate-100 px-4 py-2.5">
           <Users class="h-4 w-4 text-blue-600" />
           <h2 class="text-sm font-semibold text-slate-900">All Users</h2>
+          <span class="ml-1 text-xs text-slate-400">{{ users.length }}</span>
         </div>
         <div class="overflow-x-auto">
           <table class="w-full text-sm">
@@ -102,7 +122,7 @@ onMounted(load);
               </tr>
             </thead>
             <tbody class="divide-y divide-slate-100">
-              <tr v-for="user in users" :key="user.id" class="transition-colors hover:bg-slate-50">
+              <tr v-for="user in pagedUsers" :key="user.id" class="transition-colors hover:bg-slate-50">
                 <td class="px-4 py-2">
                   <router-link :to="'/admin/settings/users/' + user.id" class="flex items-center gap-2.5 hover:text-violet-600">
                     <img v-if="user.photoUrl" :src="user.photoUrl" class="h-7 w-7 shrink-0 rounded-full object-cover" />
@@ -143,6 +163,25 @@ onMounted(load);
             </tbody>
           </table>
         </div>
+        <div v-if="usersPageCount > 1" class="flex items-center justify-between border-t border-slate-100 px-4 py-2.5">
+          <button
+            class="flex items-center gap-1 rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 disabled:opacity-40"
+            :disabled="usersPage <= 1"
+            @click="usersPage--"
+          >
+            <ChevronLeft class="h-3.5 w-3.5" />
+            Previous
+          </button>
+          <span class="text-sm text-slate-500">Page {{ usersPage }} of {{ usersPageCount }}</span>
+          <button
+            class="flex items-center gap-1 rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 disabled:opacity-40"
+            :disabled="usersPage >= usersPageCount"
+            @click="usersPage++"
+          >
+            Next
+            <ChevronRight class="h-3.5 w-3.5" />
+          </button>
+        </div>
       </article>
 
       <!-- ───── External Users Table ───── -->
@@ -150,6 +189,7 @@ onMounted(load);
         <div class="flex items-center gap-2 border-b border-slate-100 px-4 py-2.5">
           <Globe class="h-4 w-4 text-amber-500" />
           <h2 class="text-sm font-semibold text-slate-900">External Users</h2>
+          <span class="ml-1 text-xs text-slate-400">{{ externalUsers.length }}</span>
           <span class="ml-auto rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-700">Read-only</span>
         </div>
         <div class="overflow-x-auto">
@@ -163,7 +203,7 @@ onMounted(load);
               </tr>
             </thead>
             <tbody class="divide-y divide-slate-100">
-              <tr v-for="user in externalUsers" :key="user.id" class="transition-colors hover:bg-slate-50">
+              <tr v-for="user in pagedExtUsers" :key="user.id" class="transition-colors hover:bg-slate-50">
                 <td class="px-4 py-2">
                   <div class="flex items-center gap-2.5">
                     <img v-if="user.avatarUrl" :src="user.avatarUrl" class="h-7 w-7 shrink-0 rounded-full object-cover" />
@@ -188,6 +228,25 @@ onMounted(load);
               </tr>
             </tbody>
           </table>
+        </div>
+        <div v-if="extPageCount > 1" class="flex items-center justify-between border-t border-slate-100 px-4 py-2.5">
+          <button
+            class="flex items-center gap-1 rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 disabled:opacity-40"
+            :disabled="extPage <= 1"
+            @click="extPage--"
+          >
+            <ChevronLeft class="h-3.5 w-3.5" />
+            Previous
+          </button>
+          <span class="text-sm text-slate-500">Page {{ extPage }} of {{ extPageCount }}</span>
+          <button
+            class="flex items-center gap-1 rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 transition-colors hover:bg-slate-50 disabled:opacity-40"
+            :disabled="extPage >= extPageCount"
+            @click="extPage++"
+          >
+            Next
+            <ChevronRight class="h-3.5 w-3.5" />
+          </button>
         </div>
       </article>
     </div>

@@ -13,6 +13,7 @@ export const useSiteStore = defineStore("site", {
   }),
   actions: {
     async load() {
+      if (this.initialized) return;
       try {
         const res = await getSettings();
         const d = res.data;

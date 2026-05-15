@@ -12,10 +12,11 @@ class StoreRtmfModuleRequest extends BaseFormRequest
     public function rules(): array
     {
         return [
-            'code' => 'required|string|max:16|unique:rtmf_modules,code',
-            'name' => 'required|string|max:255',
+            'project_id'  => 'nullable|integer|exists:rtmf_projects,id',
+            'code'        => 'required|string|max:16|unique:rtmf_modules,code',
+            'name'        => 'required|string|max:255',
             'description' => 'nullable|string',
-            'sort_order' => 'nullable|integer',
+            'sort_order'  => 'nullable|integer',
         ];
     }
 }
