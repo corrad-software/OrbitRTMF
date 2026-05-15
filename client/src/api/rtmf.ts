@@ -23,13 +23,8 @@ import type {
   RtmfSnapshotStatus,
   RtmfSubModule,
   RtmfSubModulePhoto,
-  RtmfFrontendFeedback,
-  RtmfImportResult,
-  RtmfFrontendApiEndpoint,
-  RtmfFrontendApiEndpointInput,
-  RtmfProject,
-  RtmfProjectInput,
-  RtmfProjectMember,
+  RtmfUrlPath,
+  RtmfUrlPathInput,
 } from "@/types";
 
 // ── Dashboard ──
@@ -257,132 +252,39 @@ export async function deleteRtmfScenarioRow(frontendId: number, groupId: number,
   return apiRequest<{ data: { success: boolean } }>(`/api/rtmf-frontends/${frontendId}/scenario-groups/${groupId}/rows/${rowId}`, { method: "DELETE" });
 }
 
-// ── Flow Scenarios ──
-export async function listRtmfScenarios(params = "") {
-  return apiRequest<{ data: RtmfScenario[]; meta: Record<string, unknown> }>(`/api/rtmf-scenarios${params}`);
-}
-export async function getRtmfScenario(id: number) {
-  return apiRequest<{ data: RtmfScenario }>(`/api/rtmf-scenarios/${id}`);
-}
-export async function createRtmfScenario(input: RtmfScenarioInput) {
-  return apiRequest<{ data: RtmfScenario }>("/api/rtmf-scenarios", { method: "POST", body: JSON.stringify(input) });
-}
-export async function updateRtmfScenario(id: number, input: RtmfScenarioInput) {
-  return apiRequest<{ data: RtmfScenario }>(`/api/rtmf-scenarios/${id}`, { method: "PATCH", body: JSON.stringify(input) });
-}
-export async function deleteRtmfScenario(id: number) {
-  return apiRequest<{ data: { success: boolean } }>(`/api/rtmf-scenarios/${id}`, { method: "DELETE" });
-}
-export async function listRtmfScenarioSteps(scenarioId: number) {
-  return apiRequest<{ data: RtmfScenarioStep[] }>(`/api/rtmf-scenarios/${scenarioId}/steps`);
-}
-export async function createRtmfScenarioStep(scenarioId: number, input: RtmfScenarioStepInput) {
-  return apiRequest<{ data: RtmfScenarioStep }>(`/api/rtmf-scenarios/${scenarioId}/steps`, { method: "POST", body: JSON.stringify(input) });
-}
-export async function updateRtmfScenarioStep(scenarioId: number, stepId: number, input: RtmfScenarioStepInput) {
-  return apiRequest<{ data: RtmfScenarioStep }>(`/api/rtmf-scenarios/${scenarioId}/steps/${stepId}`, { method: "PATCH", body: JSON.stringify(input) });
-}
-export async function deleteRtmfScenarioStep(scenarioId: number, stepId: number) {
-  return apiRequest<{ data: { success: boolean } }>(`/api/rtmf-scenarios/${scenarioId}/steps/${stepId}`, { method: "DELETE" });
-}
-export async function reorderRtmfScenarioSteps(scenarioId: number, ids: number[]) {
-  return apiRequest<{ data: { success: boolean } }>(`/api/rtmf-scenarios/${scenarioId}/steps/reorder`, { method: "POST", body: JSON.stringify({ ids }) });
-}
-// ── Scenario Attachments ──
-export async function listRtmfScenarioAttachments(scenarioId: number) {
-  return apiRequest<{ data: RtmfScenarioAttachment[] }>(`/api/rtmf-scenarios/${scenarioId}/attachments`);
-}
-export async function uploadRtmfScenarioAttachment(scenarioId: number, file: File, label: string) {
-  const form = new FormData();
-  form.append("file", file);
-  if (label) form.append("label", label);
-  return apiRequest<{ data: RtmfScenarioAttachment }>(`/api/rtmf-scenarios/${scenarioId}/attachments`, { method: "POST", body: form });
-}
-export async function updateRtmfScenarioAttachmentLabel(scenarioId: number, attachmentId: number, label: string) {
-  return apiRequest<{ data: RtmfScenarioAttachment }>(`/api/rtmf-scenarios/${scenarioId}/attachments/${attachmentId}`, { method: "PATCH", body: JSON.stringify({ label }) });
-}
-export async function deleteRtmfScenarioAttachment(scenarioId: number, attachmentId: number) {
-  return apiRequest<{ data: { success: boolean } }>(`/api/rtmf-scenarios/${scenarioId}/attachments/${attachmentId}`, { method: "DELETE" });
+// ── URL Paths ──
+export async function listRtmfUrlPaths(params = "") {
+  return apiRequest<{ data: RtmfUrlPath[]; meta: Record<string, unknown> }>(
+    `/api/rtmf-url-paths${params}`,
+  );
 }
 
-export async function createRtmfScenarioStepLink(scenarioId: number, stepId: number, input: RtmfScenarioStepLinkInput) {
-  return apiRequest<{ data: RtmfScenarioStepLink }>(`/api/rtmf-scenarios/${scenarioId}/steps/${stepId}/links`, { method: "POST", body: JSON.stringify(input) });
-}
-export async function updateRtmfScenarioStepLink(scenarioId: number, stepId: number, linkId: number, input: RtmfScenarioStepLinkInput) {
-  return apiRequest<{ data: RtmfScenarioStepLink }>(`/api/rtmf-scenarios/${scenarioId}/steps/${stepId}/links/${linkId}`, { method: "PATCH", body: JSON.stringify(input) });
-}
-export async function deleteRtmfScenarioStepLink(scenarioId: number, stepId: number, linkId: number) {
-  return apiRequest<{ data: { success: boolean } }>(`/api/rtmf-scenarios/${scenarioId}/steps/${stepId}/links/${linkId}`, { method: "DELETE" });
+export async function getRtmfUrlPath(id: number) {
+  return apiRequest<{ data: RtmfUrlPath }>(`/api/rtmf-url-paths/${id}`);
 }
 
-// ── Frontend Feedbacks ──
-export async function listRtmfFrontendFeedbacks(frontendId: number) {
-  return apiRequest<{ data: RtmfFrontendFeedback[] }>(`/api/rtmf-frontends/${frontendId}/feedbacks`);
-}
-export async function upsertRtmfFrontendFeedback(frontendId: number, role: string, input: { status: string; comment: string | null }) {
-  return apiRequest<{ data: RtmfFrontendFeedback }>(`/api/rtmf-frontends/${frontendId}/feedbacks/${role}`, { method: "PUT", body: JSON.stringify(input) });
-}
-
-// ── Frontend API Endpoints ──
-export async function listRtmfApiEndpoints(frontendId: number) {
-  return apiRequest<{ data: RtmfFrontendApiEndpoint[] }>(`/api/rtmf-frontends/${frontendId}/api-endpoints`);
-}
-export async function createRtmfApiEndpoint(frontendId: number, input: RtmfFrontendApiEndpointInput) {
-  return apiRequest<{ data: RtmfFrontendApiEndpoint }>(`/api/rtmf-frontends/${frontendId}/api-endpoints`, { method: "POST", body: JSON.stringify(input) });
-}
-export async function updateRtmfApiEndpoint(frontendId: number, endpointId: number, input: Partial<RtmfFrontendApiEndpointInput>) {
-  return apiRequest<{ data: RtmfFrontendApiEndpoint }>(`/api/rtmf-frontends/${frontendId}/api-endpoints/${endpointId}`, { method: "PATCH", body: JSON.stringify(input) });
-}
-export async function deleteRtmfApiEndpoint(frontendId: number, endpointId: number) {
-  return apiRequest<{ data: { success: boolean } }>(`/api/rtmf-frontends/${frontendId}/api-endpoints/${endpointId}`, { method: "DELETE" });
-}
-
-// ── Catalog Import ──
-export async function importRtmfCatalog(payload: unknown) {
-  return apiRequest<{ data: RtmfImportResult }>("/api/rtmf-frontends/import", {
+export async function createRtmfUrlPath(input: RtmfUrlPathInput) {
+  return apiRequest<{ data: RtmfUrlPath }>("/api/rtmf-url-paths", {
     method: "POST",
-    body: JSON.stringify(payload),
+    body: JSON.stringify(input),
   });
 }
 
-// ── Projects ──
-export async function listRtmfProjects() {
-  return apiRequest<{ data: RtmfProject[] }>("/api/rtmf-projects");
+export async function updateRtmfUrlPath(id: number, input: Partial<RtmfUrlPathInput>) {
+  return apiRequest<{ data: RtmfUrlPath }>(`/api/rtmf-url-paths/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(input),
+  });
 }
 
-export async function getRtmfProject(id: number) {
-  return apiRequest<{ data: RtmfProject }>(`/api/rtmf-projects/${id}`);
+export async function deleteRtmfUrlPath(id: number) {
+  return apiRequest<{ data: { success: boolean } }>(`/api/rtmf-url-paths/${id}`, {
+    method: "DELETE",
+  });
 }
 
-export async function createRtmfProject(input: RtmfProjectInput) {
-  return apiRequest<{ data: RtmfProject }>("/api/rtmf-projects", { method: "POST", body: JSON.stringify(input) });
-}
-
-export async function updateRtmfProject(id: number, input: RtmfProjectInput) {
-  return apiRequest<{ data: RtmfProject }>(`/api/rtmf-projects/${id}`, { method: "PUT", body: JSON.stringify(input) });
-}
-
-export async function deleteRtmfProject(id: number) {
-  return apiRequest<{ data: { success: boolean } }>(`/api/rtmf-projects/${id}`, { method: "DELETE" });
-}
-
-export async function listRtmfProjectMembers(projectId: number) {
-  return apiRequest<{ data: RtmfProjectMember[] }>(`/api/rtmf-projects/${projectId}/members`);
-}
-
-export async function listRtmfProjectCandidates(projectId: number, q = "") {
-  const params = q ? `?q=${encodeURIComponent(q)}` : "";
-  return apiRequest<{ data: RtmfProjectMember[] }>(`/api/rtmf-projects/${projectId}/candidates${params}`);
-}
-
-export async function addRtmfProjectMember(projectId: number, externalUserId: string, projectRole = "viewer") {
-  return apiRequest<{ data: { success: boolean } }>(`/api/rtmf-projects/${projectId}/members`, { method: "POST", body: JSON.stringify({ externalUserId, projectRole }) });
-}
-
-export async function updateRtmfProjectMember(projectId: number, userId: number, projectRole: string) {
-  return apiRequest<{ data: { success: boolean } }>(`/api/rtmf-projects/${projectId}/members/${userId}`, { method: "PATCH", body: JSON.stringify({ projectRole }) });
-}
-
-export async function removeRtmfProjectMember(projectId: number, userId: number) {
-  return apiRequest<{ data: { success: boolean } }>(`/api/rtmf-projects/${projectId}/members/${userId}`, { method: "DELETE" });
+export async function captureRtmfUrlPathSnapshot(id: number) {
+  return apiRequest<{ data: RtmfUrlPath }>(`/api/rtmf-url-paths/${id}/snapshot`, {
+    method: "POST",
+  });
 }

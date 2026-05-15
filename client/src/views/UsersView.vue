@@ -41,11 +41,31 @@ const pagedExtUsers = computed(() => {
 });
 
 async function load() {
-  const [localRes, extRes] = await Promise.all([listUsers(), listExternalUsers()]);
-  users.value = localRes.data;
-  externalUsers.value = extRes.data;
-  usersPage.value = 1;
-  extPage.value = 1;
+  // Load independently: /api/external/users uses MySQL testagent — if it fails, local PostgreSQL
+  // users must still appear (Promise.all would reject and leave both tables empty).
+  const [localOutcome, extOutcome] = await Promise.allSettled([listUsers(), listExternalUsers()]);
+
+  if (localOutcome.status === "fulfilled") {
+    users.value = localOutcome.value.data;
+  } else {
+    users.value = [];
+    toast.error(
+      "Could not load users",
+      localOutcome.reason instanceof Error ? localOutcome.reason.message : "Request failed",
+    );
+  }
+
+  if (extOutcome.status === "fulfilled") {
+    externalUsers.value = extOutcome.value.data;
+  } else {
+    externalUsers.value = [];
+    toast.info(
+      "External users not loaded",
+      extOutcome.reason instanceof Error
+        ? extOutcome.reason.message
+        : "Optional MySQL directory unreachable — check EXTERNAL_DB_* if you need this list.",
+    );
+  }
 }
 
 async function remove(id: number) {

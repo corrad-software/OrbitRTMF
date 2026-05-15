@@ -97,7 +97,7 @@ const treeRoots = computed((): SubModuleTreeNode[] => {
 const treeDisplayItems = computed((): DisplayItem[] => {
   function walk(nodes: SubModuleTreeNode[], depth: number, guides: boolean[]): DisplayItem[] {
     const result: DisplayItem[] = [];
-    const sorted = [...nodes].sort((a, b) => (a.sort_order ?? a.sortOrder ?? 0) - (b.sort_order ?? b.sortOrder ?? 0));
+    const sorted = [...nodes].sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
     for (let i = 0; i < sorted.length; i++) {
       const node = sorted[i];
       const isLast = i === sorted.length - 1;
@@ -199,8 +199,8 @@ async function removePhoto(photoId: number) {
   }
 }
 
-function openPhotoModal(photo: RtmfSubModulePhoto) {
-  modalPhoto.value = photo;
+function openPhotoModal(photo: RtmfModulePhoto | RtmfSubModulePhoto) {
+  modalPhoto.value = { url: photo.url, originalName: photo.originalName };
 }
 
 function closeModal() {
