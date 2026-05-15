@@ -140,6 +140,12 @@ export type RtmfDashboardActorStat = {
   frontendsCount: number;
 };
 
+export type RtmfReviewRoleStat = {
+  approved: number;
+  reviewed: number;
+  open: number;
+};
+
 export type RtmfDashboardSummary = {
   totals: {
     frontends: number;
@@ -148,6 +154,7 @@ export type RtmfDashboardSummary = {
     actors: number;
     items: number;
     scenarios: number;
+    approvedAll: number;
   };
   itemsByStatus: {
     implemented: number;
@@ -157,6 +164,12 @@ export type RtmfDashboardSummary = {
   };
   byModule: RtmfDashboardModuleStat[];
   byActor: RtmfDashboardActorStat[];
+  byReview: {
+    businessAnalyst: RtmfReviewRoleStat;
+    qa: RtmfReviewRoleStat;
+    technical: RtmfReviewRoleStat;
+    developer: RtmfReviewRoleStat;
+  };
 };
 
 export type RtmfFrontendLink = {
@@ -204,6 +217,7 @@ export type RtmfFrontend = RtmfFrontendInput & {
   linksTo?: RtmfFrontendLink[];
   snapshotStatus?: RtmfSnapshotStatus;
   snapshotCapturedAt?: string | null;
+  feedbacks?: RtmfFrontendFeedback[];
 };
 
 export type RtmfScenarioStepLinkInput = {
@@ -265,7 +279,30 @@ export type RtmfScenario = RtmfScenarioInput & {
   updatedAt: string;
 };
 
-export type RtmfFrontendFeedbackRole = 'business_analyst' | 'qa' | 'technical';
+export type RtmfProjectInput = {
+  code: string;
+  name: string;
+  description?: string | null;
+  sortOrder?: number;
+};
+
+export type RtmfProject = RtmfProjectInput & {
+  id: number;
+  myRole?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type RtmfProjectMember = {
+  id: number;
+  name: string;
+  email: string;
+  role: string;
+  projectRole?: string;
+  photoUrl?: string | null;
+};
+
+export type RtmfFrontendFeedbackRole = 'business_analyst' | 'qa' | 'technical' | 'developer';
 export type RtmfFrontendFeedbackStatus = 'open' | 'reviewed' | 'approved';
 
 export type RtmfFrontendFeedback = {

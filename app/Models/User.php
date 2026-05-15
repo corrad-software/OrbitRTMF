@@ -77,4 +77,28 @@ class User extends Authenticatable
             && is_array($roleModel->permissions)
             && in_array($permission, $roleModel->permissions);
     }
+
+    /**
+     * Return this user's role within a specific RTMF project.
+     * System admins always get 'admin'. Returns null if not a member.
+     */
+    public function rtmfProjectRole(int $projectId): ?string
+    {
+        if (strtolower($this->role ?? '') === 'admin') {
+            return 'admin';
+        }
+
+        return \Illuminate\Support\Facades\DB::table('rtmf_project_users')
+            ->where('project_id', $projectId)
+            ->where('user_id', $this->id)
+            ->value('role');
+    }
+
+    /**
+     * Returns true if the user can edit content in the given project.
+     */
+    public function canEditRtmfProject(int $projectId): bool
+    {
+        return in_array($this->rtmfProjectRole($projectId), ['admin', 'business_analyst'], true);
+    }
 }

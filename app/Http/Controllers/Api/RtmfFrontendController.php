@@ -7,6 +7,7 @@ use App\Http\Requests\StoreRtmfFrontendRequest;
 use App\Http\Requests\StoreRtmfImportRequest;
 use App\Http\Requests\UpdateRtmfFrontendRequest;
 use App\Http\Traits\ApiResponse;
+use App\Http\Traits\ChecksRtmfProjectRole;
 use App\Models\RtmfActor;
 use App\Models\RtmfFrontend;
 use App\Models\RtmfFrontendApiEndpoint;
@@ -20,7 +21,7 @@ use Illuminate\Support\Facades\File;
 
 class RtmfFrontendController extends Controller
 {
-    use ApiResponse;
+    use ApiResponse, ChecksRtmfProjectRole;
 
     public function index(Request $request): JsonResponse
     {
@@ -38,13 +39,20 @@ class RtmfFrontendController extends Controller
             $sortBy = 'spec_id';
         }
 
+        $projectId = $request->integer('project_id') ?: null;
+
         $query = RtmfFrontend::query()->with([
             'module:id,code,name',
             'subModule:id,module_id,code,name',
             'actors:id,name',
             'linksFrom:id,spec_id,title',
             'linksTo:id,spec_id,title',
+            'feedbacks:id,rtmf_frontend_id,role,status',
         ]);
+
+        if ($projectId) {
+            $query->whereHas('module', fn ($q) => $q->where('project_id', $projectId));
+        }
 
         if ($moduleId) {
             $query->where('module_id', $moduleId);
@@ -85,6 +93,9 @@ class RtmfFrontendController extends Controller
     public function store(StoreRtmfFrontendRequest $request): JsonResponse
     {
         $data = $request->validated();
+        $module = RtmfModule::find($data['module_id'] ?? null);
+        if ($deny = $this->denyIfCannotEdit($request, $module?->project_id)) return $deny;
+
         $actorIds = $data['actor_ids'] ?? [];
         $fromIds = $data['from_ids'] ?? [];
         $toIds = $data['to_ids'] ?? [];
@@ -117,6 +128,9 @@ class RtmfFrontendController extends Controller
         if (! $row) {
             return $this->sendError(404, 'NOT_FOUND', 'RTMF frontend not found');
         }
+
+        $module = RtmfModule::find($row->module_id);
+        if ($deny = $this->denyIfCannotEdit($request, $module?->project_id)) return $deny;
 
         $data = $request->validated();
         $hasActors = array_key_exists('actor_ids', $data);
@@ -278,7 +292,15 @@ class RtmfFrontendController extends Controller
 
     public function destroy(int $id): JsonResponse
     {
-        RtmfFrontend::where('id', $id)->delete();
+        $row = RtmfFrontend::find($id);
+        if (! $row) {
+            return $this->sendError(404, 'NOT_FOUND', 'RTMF frontend not found');
+        }
+
+        $module = RtmfModule::find($row->module_id);
+        if ($deny = $this->denyIfCannotEdit(request(), $module?->project_id)) return $deny;
+
+        $row->delete();
 
         return $this->sendOk(['success' => true]);
     }

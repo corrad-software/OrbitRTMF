@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from "vue";
 import { RouterLink, useRoute, useRouter } from "vue-router";
-import { Cable, Paperclip, Trash2 as TrashIcon, LayoutGrid, Save, Trash2, Upload, X, Plus, TableProperties, ExternalLink, GitMerge, Search, Network, GripVertical, Layout, UserCheck, MessageSquare } from "lucide-vue-next";
+import { Cable, Paperclip, Trash2 as TrashIcon, LayoutGrid, Save, Trash2, Upload, X, Plus, TableProperties, ExternalLink, GitMerge, Search, Network, GripVertical, Layout, UserCheck, MessageSquare, CheckCircle2 } from "lucide-vue-next";
 
 import AdminLayout from "@/layouts/AdminLayout.vue";
 import MarkdownEditor from "@/components/MarkdownEditor.vue";
@@ -41,12 +41,14 @@ import type { RtmfActor, RtmfApiEndpointMethod, RtmfAttachment, RtmfFrontend, Rt
 import { useConfirmDialog } from "@/composables/useConfirmDialog";
 import { useToast } from "@/composables/useToast";
 import { useAuthStore } from "@/stores/auth";
+import { useRtmfProjectStore } from "@/stores/rtmfProject";
 
 const route = useRoute();
 const router = useRouter();
 const toast = useToast();
 const confirmDialog = useConfirmDialog();
 const auth = useAuthStore();
+const projectStore = useRtmfProjectStore();
 
 const id = computed(() => Number(route.params.id || 0));
 const isEdit = computed(() => id.value > 0);
@@ -238,7 +240,9 @@ watch(moduleId, async (next, prev) => {
 });
 
 async function loadRefData() {
-  const [m, a, localU, extU] = await Promise.all([listRtmfModules(), listRtmfActors(), listUsers(), listExternalUsers()]);
+  const pid = projectStore.activeProjectId;
+  const pidParam = pid ? `?project_id=${pid}` : "";
+  const [m, a, localU, extU] = await Promise.all([listRtmfModules(pidParam), listRtmfActors(pidParam), listUsers(), listExternalUsers()]);
   modules.value = m.data;
   actors.value = a.data;
   const local: AssigneeOption[] = localU.data.map((u) => ({
@@ -329,15 +333,17 @@ async function save() {
 const isAssignedToMe = computed(() =>
   auth.user ? assignees.value.some((a) => String(a.id) === String(auth.user!.id)) : false
 );
-const canToggleDone = computed(() => auth.isAdmin || isAssignedToMe.value);
-
-async function toggleDone() {
-  if (!isEdit.value || !canToggleDone.value) return;
+async function syncDoneFromFeedbacks() {
+  if (!isEdit.value) return;
+  const allApproved = FEEDBACK_ROLES.every(r =>
+    feedbacks.value.find(f => f.role === r.key)?.status === 'approved'
+  );
+  if (allApproved === isDone.value) return;
+  isDone.value = allApproved;
   try {
     await updateRtmfFrontend(id.value, { isDone: isDone.value } as never);
-  } catch (e) {
-    isDone.value = !isDone.value; // revert on error
-    toast.error("Failed to update status", e instanceof Error ? e.message : "");
+  } catch {
+    isDone.value = !isDone.value;
   }
 }
 
@@ -585,7 +591,18 @@ const FEEDBACK_ROLES = [
   { key: 'business_analyst' as const, label: 'Business Analyst' },
   { key: 'qa' as const,               label: 'QA' },
   { key: 'technical' as const,        label: 'Technical' },
+  { key: 'developer' as const,        label: 'Developer' },
 ];
+
+function formatFeedbackDate(iso: string | undefined): string {
+  if (!iso) return '';
+  return new Date(iso).toLocaleString('en-GB', { dateStyle: 'short', timeStyle: 'short' });
+}
+
+function canEditFeedbackRow(roleKey: string): boolean {
+  const pr = projectStore.activeProjectRole;
+  return pr === 'admin' || pr === roleKey;
+}
 
 function feedbackFor(role: string) {
   return feedbacks.value.find(f => f.role === role)
@@ -600,6 +617,7 @@ async function saveFeedback(role: string, patch: { status?: string; comment?: st
     const idx = feedbacks.value.findIndex(f => f.role === role);
     if (idx >= 0) feedbacks.value[idx] = res.data;
     else feedbacks.value.push(res.data);
+    await syncDoneFromFeedbacks();
   } catch {
     toast.error("Failed to save feedback");
   }
@@ -716,7 +734,12 @@ onMounted(async () => {
           <span class="text-slate-300">/</span>
           <span class="text-slate-700">{{ isEdit ? 'Edit' : 'New' }}</span>
         </nav>
-        <h1 class="page-title">{{ isEdit ? 'Edit Page' : 'New Page' }}</h1>
+        <h1 class="page-title flex items-center gap-2">
+          {{ isEdit ? 'Edit Page' : 'New Page' }}
+          <span v-if="isDone" class="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">
+            <CheckCircle2 class="h-3 w-3" /> Completed
+          </span>
+        </h1>
         <p v-if="isEdit && createdAt" class="mt-1 text-sm text-slate-500">
           Created {{ new Date(createdAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) }}
         </p>
@@ -759,7 +782,7 @@ onMounted(async () => {
         >
           <MessageSquare class="h-4 w-4" />
           Feedback
-          <span class="ml-1 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600">{{ feedbacks.filter(f => f.status !== 'open').length }}/3</span>
+          <span class="ml-1 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600">{{ feedbacks.filter(f => f.status !== 'open').length }}/4</span>
         </button>
       </div>
 
@@ -901,12 +924,12 @@ onMounted(async () => {
                   class="w-full rounded border border-transparent px-1.5 py-1 text-xs text-slate-700 hover:border-slate-200 focus:border-slate-300 focus:outline-none focus:ring-1 focus:ring-slate-200"
                   placeholder="Note / Condition…"
                 />
-                <button v-if="auth.isAdmin" @click="removeFromLink(i)" class="flex items-center justify-center rounded p-1 text-slate-400 hover:bg-rose-50 hover:text-rose-600">
+                <button v-if="projectStore.canEdit" @click="removeFromLink(i)" class="flex items-center justify-center rounded p-1 text-slate-400 hover:bg-rose-50 hover:text-rose-600">
                   <TrashIcon class="h-3.5 w-3.5" />
                 </button>
               </div>
             </div>
-            <div v-if="auth.isAdmin" class="px-4 py-2.5">
+            <div v-if="projectStore.canEdit" class="px-4 py-2.5">
               <button @click="addFromLink" class="flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 shadow-sm transition-colors hover:bg-slate-50">
                 <Plus class="h-3.5 w-3.5" />
                 Add From
@@ -956,12 +979,12 @@ onMounted(async () => {
                   class="w-full rounded border border-transparent px-1.5 py-1 text-xs text-slate-700 hover:border-slate-200 focus:border-slate-300 focus:outline-none focus:ring-1 focus:ring-slate-200"
                   placeholder="Note / Condition…"
                 />
-                <button v-if="auth.isAdmin" @click="removeToLink(i)" class="flex items-center justify-center rounded p-1 text-slate-400 hover:bg-rose-50 hover:text-rose-600">
+                <button v-if="projectStore.canEdit" @click="removeToLink(i)" class="flex items-center justify-center rounded p-1 text-slate-400 hover:bg-rose-50 hover:text-rose-600">
                   <TrashIcon class="h-3.5 w-3.5" />
                 </button>
               </div>
             </div>
-            <div v-if="auth.isAdmin" class="px-4 py-2.5">
+            <div v-if="projectStore.canEdit" class="px-4 py-2.5">
               <button @click="addToLink" class="flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 shadow-sm transition-colors hover:bg-slate-50">
                 <Plus class="h-3.5 w-3.5" />
                 Add Go To
@@ -996,7 +1019,7 @@ onMounted(async () => {
                   </div>
                   <span class="min-w-0 flex-1 truncate text-xs font-medium text-violet-900">{{ a.name }}</span>
                   <button
-                    v-if="auth.isAdmin"
+                    v-if="projectStore.canEdit"
                     type="button"
                     @click="assignees = assignees.filter((x) => String(x.id) !== String(a.id))"
                     class="flex shrink-0 items-center justify-center rounded-full p-0.5 text-violet-400 hover:bg-violet-200 hover:text-violet-700"
@@ -1005,7 +1028,7 @@ onMounted(async () => {
               </div>
 
               <!-- Search input -->
-              <div v-if="auth.isAdmin" class="relative">
+              <div v-if="projectStore.canEdit" class="relative">
                 <div v-if="assigneeDropdownOpen" class="fixed inset-0 z-10" @click="assigneeDropdownOpen = false" />
                 <input
                   v-model="assigneeSearch"
@@ -1037,8 +1060,8 @@ onMounted(async () => {
                 <p v-if="assigneeDropdownOpen && !filteredAssigneeUsers.length && assigneeSearch" class="absolute left-0 right-0 z-20 mt-1 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-400 shadow-lg">No match.</p>
               </div>
 
-              <p v-if="!assignees.length && !auth.isAdmin" class="text-xs text-slate-400">No one assigned.</p>
-              <p v-if="!auth.isAdmin && assignees.length === 0" class="text-xs text-slate-400">Only admins can assign.</p>
+              <p v-if="!assignees.length && !projectStore.canEdit" class="text-xs text-slate-400">No one assigned.</p>
+              <p v-if="!projectStore.canEdit && assignees.length === 0" class="text-xs text-slate-400">Only admins can assign.</p>
             </div>
           </div>
 
@@ -1111,12 +1134,12 @@ onMounted(async () => {
                     <span class="shrink-0">{{ formatBytes(att.size) }}</span>
                   </div>
                 </div>
-                <button v-if="auth.isAdmin" @click="removeAttachment(att.id)" class="shrink-0 rounded p-1 text-slate-400 hover:bg-rose-50 hover:text-rose-600">
+                <button v-if="projectStore.canEdit" @click="removeAttachment(att.id)" class="shrink-0 rounded p-1 text-slate-400 hover:bg-rose-50 hover:text-rose-600">
                   <TrashIcon class="h-3.5 w-3.5" />
                 </button>
               </div>
               <!-- Upload row -->
-              <div v-if="auth.isAdmin" class="space-y-2 p-3">
+              <div v-if="projectStore.canEdit" class="space-y-2 p-3">
                 <input id="attachment-file-input" type="file" @change="onFileChange" class="block w-full rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs text-slate-700 shadow-sm file:mr-2 file:rounded file:border-0 file:bg-slate-100 file:px-2 file:py-0.5 file:text-xs file:font-medium hover:file:bg-slate-200" />
                 <input v-model="uploadLabel" class="w-full rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200" placeholder="Label (optional)" />
                 <button
@@ -1219,7 +1242,7 @@ onMounted(async () => {
           <div class="flex items-center gap-2 border-b border-slate-100 px-4 py-3">
             <Layout class="h-4 w-4 text-violet-600" />
             <h2 class="text-sm font-semibold text-slate-900">Mockup Image</h2>
-            <div v-if="mockupAttachment && auth.isAdmin" class="ml-auto flex gap-2">
+            <div v-if="mockupAttachment && projectStore.canEdit" class="ml-auto flex gap-2">
               <label class="flex cursor-pointer items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 shadow-sm transition-colors hover:bg-slate-50">
                 <Upload class="h-4 w-4" />
                 Replace
@@ -1250,7 +1273,7 @@ onMounted(async () => {
               </div>
               <input id="mockup-file-input" type="file" accept="image/*" class="hidden" @change="onMockupFileChange" />
             </label>
-            <div v-if="mockupFile && auth.isAdmin" class="mt-3 flex justify-end">
+            <div v-if="mockupFile && projectStore.canEdit" class="mt-3 flex justify-end">
               <button
                 @click="handleMockupUpload"
                 :disabled="mockupUploading"
@@ -1263,7 +1286,7 @@ onMounted(async () => {
           </div>
 
           <!-- Replace trigger upload handler (hidden file input result) -->
-          <div v-if="mockupFile && mockupAttachment && auth.isAdmin" class="border-t border-slate-100 px-4 py-3">
+          <div v-if="mockupFile && mockupAttachment && projectStore.canEdit" class="border-t border-slate-100 px-4 py-3">
             <div class="flex items-center justify-between gap-3">
               <span class="truncate text-sm text-slate-600">{{ mockupFile.name }}</span>
               <button
@@ -1478,14 +1501,14 @@ onMounted(async () => {
                   />
                 </div>
 
-                <button v-if="auth.isAdmin" @click="removeItem(item.id)" class="mt-1 flex items-center justify-center rounded-lg p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600">
+                <button v-if="projectStore.canEdit" @click="removeItem(item.id)" class="mt-1 flex items-center justify-center rounded-lg p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600">
                   <TrashIcon class="h-4 w-4" />
                 </button>
               </div>
             </div>
           </div><!-- end overflow-x-auto -->
 
-          <div v-if="auth.isAdmin" class="border-t border-slate-100 px-5 py-3">
+          <div v-if="projectStore.canEdit" class="border-t border-slate-100 px-5 py-3">
             <button
               @click="addItem"
               class="flex items-center gap-2 rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 shadow-sm transition-colors hover:bg-slate-50"
@@ -1526,7 +1549,7 @@ onMounted(async () => {
                 />
               </div>
               <button
-                v-if="auth.isAdmin"
+                v-if="projectStore.canEdit"
                 @click="removeScenarioGroup(group.id)"
                 class="mt-1 flex items-center justify-center rounded p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600"
                 title="Delete group"
@@ -1578,7 +1601,7 @@ onMounted(async () => {
                     placeholder="Describe the activity or scenario step…"
                   />
                   <button
-                    v-if="auth.isAdmin"
+                    v-if="projectStore.canEdit"
                     @click="removeScenarioRow(group, row.id)"
                     class="mt-1 flex items-center justify-center rounded p-1 text-slate-400 hover:bg-rose-50 hover:text-rose-600"
                   >
@@ -1590,7 +1613,7 @@ onMounted(async () => {
 
             <!-- Add row -->
             <button
-              v-if="auth.isAdmin"
+              v-if="projectStore.canEdit"
               @click="addScenarioRow(group)"
               class="flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-1.5 text-xs font-medium text-slate-500 shadow-sm transition-colors hover:bg-slate-50"
             >
@@ -1601,7 +1624,7 @@ onMounted(async () => {
         </div>
 
         <!-- Add group -->
-        <div v-if="auth.isAdmin" class="border-t border-slate-100 px-4 py-3">
+        <div v-if="projectStore.canEdit" class="border-t border-slate-100 px-4 py-3">
           <button
             @click="addScenarioGroup"
             class="flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 shadow-sm transition-colors hover:bg-slate-50"
@@ -1618,41 +1641,27 @@ onMounted(async () => {
           <MessageSquare class="h-4 w-4 text-violet-600" />
           <h2 class="text-sm font-semibold text-slate-900">Feedback</h2>
         </div>
-        <!-- Mark as Done -->
-        <div class="flex items-center gap-4 border-b border-slate-100 px-4 py-3" :class="isDone ? 'bg-emerald-50' : ''">
-          <div class="w-44 flex-shrink-0">
-            <p class="text-sm font-semibold text-slate-800">Mark as Done</p>
-            <p class="mt-0.5 text-xs" :class="isDone ? 'text-emerald-600' : 'text-slate-400'">
-              {{ isDone ? 'This page is completed' : 'Not yet completed' }}
-            </p>
-          </div>
-          <button
-            type="button"
-            :disabled="!canToggleDone"
-            @click="isDone = !isDone; toggleDone()"
-            class="relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none disabled:cursor-not-allowed disabled:opacity-40"
-            :class="isDone ? 'bg-emerald-500' : 'bg-slate-200'"
-            :title="!canToggleDone ? 'Only assigned users or admins can toggle this' : ''"
-          >
-            <span
-              class="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200"
-              :class="isDone ? 'translate-x-5' : 'translate-x-0'"
-            />
-          </button>
-        </div>
-
         <div class="divide-y divide-slate-100">
-          <div v-for="roleDef in FEEDBACK_ROLES" :key="roleDef.key" class="p-4">
+          <div
+            v-for="roleDef in FEEDBACK_ROLES"
+            :key="roleDef.key"
+            class="p-4"
+            :class="!canEditFeedbackRow(roleDef.key) ? 'opacity-60' : ''"
+          >
             <div class="flex items-start gap-4">
               <div class="w-44 flex-shrink-0 pt-0.5">
                 <span class="text-sm font-semibold text-slate-700">{{ roleDef.label }}</span>
+                <span v-if="!canEditFeedbackRow(roleDef.key)" class="ml-1.5 rounded bg-slate-100 px-1.5 py-0.5 text-[10px] font-medium text-slate-500">Read only</span>
               </div>
               <div class="flex-1 space-y-2">
                 <select
                   :value="feedbackFor(roleDef.key).status"
+                  :disabled="!canEditFeedbackRow(roleDef.key)"
                   @change="saveFeedback(roleDef.key, { status: ($event.target as HTMLSelectElement).value as RtmfFrontendFeedbackStatus })"
-                  class="rounded-lg border px-3 py-1.5 text-sm font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-violet-100 transition-colors"
+                  class="rounded-lg border px-3 py-1.5 text-sm font-medium shadow-sm transition-colors"
                   :class="{
+                    'focus:outline-none focus:ring-2 focus:ring-violet-100 cursor-pointer': canEditFeedbackRow(roleDef.key),
+                    'cursor-not-allowed': !canEditFeedbackRow(roleDef.key),
                     'border-slate-200 bg-slate-50 text-slate-500': feedbackFor(roleDef.key).status === 'open',
                     'border-blue-200 bg-blue-50 text-blue-700': feedbackFor(roleDef.key).status === 'reviewed',
                     'border-emerald-200 bg-emerald-50 text-emerald-700': feedbackFor(roleDef.key).status === 'approved',
@@ -1664,18 +1673,23 @@ onMounted(async () => {
                 </select>
                 <textarea
                   :value="feedbackFor(roleDef.key).comment ?? ''"
-                  @blur="saveFeedback(roleDef.key, { comment: ($event.target as HTMLTextAreaElement).value || null })"
+                  :disabled="!canEditFeedbackRow(roleDef.key)"
+                  @blur="canEditFeedbackRow(roleDef.key) && saveFeedback(roleDef.key, { comment: ($event.target as HTMLTextAreaElement).value || null })"
                   rows="2"
-                  class="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 placeholder-slate-400 shadow-sm focus:border-violet-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-violet-100"
-                  placeholder="Leave a comment…"
+                  class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 placeholder-slate-400 shadow-sm"
+                  :class="canEditFeedbackRow(roleDef.key) ? 'bg-slate-50 focus:border-violet-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-violet-100' : 'bg-slate-50 cursor-not-allowed resize-none'"
+                  :placeholder="canEditFeedbackRow(roleDef.key) ? 'Leave a comment…' : ''"
                 />
+                <p v-if="feedbackFor(roleDef.key).id" class="text-[10px] text-slate-400">
+                  Updated {{ formatFeedbackDate(feedbackFor(roleDef.key).updatedAt) }}
+                </p>
               </div>
             </div>
           </div>
         </div>
       </article>
 
-      <div v-if="auth.isAdmin" class="flex items-center gap-3">
+      <div v-if="projectStore.canEdit" class="flex items-center gap-3">
         <button class="flex items-center gap-2 rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-slate-800" @click="save">
           <Save class="h-4 w-4" />
           {{ isEdit ? 'Update Frontend' : 'Create Frontend' }}

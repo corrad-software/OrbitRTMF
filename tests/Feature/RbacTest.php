@@ -3,8 +3,12 @@
 namespace Tests\Feature;
 
 use App\Models\Role;
+use App\Models\RtmfFrontend;
+use App\Models\RtmfModule;
+use App\Models\RtmfProject;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class RbacTest extends TestCase
@@ -193,25 +197,37 @@ class RbacTest extends TestCase
 
     public function test_tester_cannot_create_rtmf_frontend(): void
     {
+        $project = RtmfProject::create(['code' => 'RBAC', 'name' => 'RBAC Project']);
+        $module  = RtmfModule::create(['code' => 'MOD', 'name' => 'Module', 'project_id' => $project->id]);
+
         $this->actingAs($this->tester);
         $response = $this->postJson('/api/rtmf-frontends', [
-            'title' => 'Should Fail',
-            'specId' => 'TST-001',
+            'title'    => 'Should Fail',
+            'specId'   => 'TST-001',
+            'moduleId' => $module->id,
         ]);
         $response->assertStatus(403)->assertJsonPath('error.code', 'FORBIDDEN');
     }
 
     public function test_tester_cannot_update_rtmf_frontend(): void
     {
+        $project  = RtmfProject::create(['code' => 'RBAC2', 'name' => 'RBAC Project 2']);
+        $module   = RtmfModule::create(['code' => 'MOD2', 'name' => 'Module 2', 'project_id' => $project->id]);
+        $frontend = RtmfFrontend::create(['spec_id' => 'F-001', 'module_id' => $module->id, 'title' => 'Existing']);
+
         $this->actingAs($this->tester);
-        $response = $this->putJson('/api/rtmf-frontends/1', ['title' => 'Hacked']);
+        $response = $this->putJson("/api/rtmf-frontends/{$frontend->id}", ['title' => 'Hacked']);
         $response->assertStatus(403)->assertJsonPath('error.code', 'FORBIDDEN');
     }
 
     public function test_tester_cannot_delete_rtmf_frontend(): void
     {
+        $project  = RtmfProject::create(['code' => 'RBAC3', 'name' => 'RBAC Project 3']);
+        $module   = RtmfModule::create(['code' => 'MOD3', 'name' => 'Module 3', 'project_id' => $project->id]);
+        $frontend = RtmfFrontend::create(['spec_id' => 'F-002', 'module_id' => $module->id, 'title' => 'To Delete']);
+
         $this->actingAs($this->tester);
-        $response = $this->deleteJson('/api/rtmf-frontends/1');
+        $response = $this->deleteJson("/api/rtmf-frontends/{$frontend->id}");
         $response->assertStatus(403)->assertJsonPath('error.code', 'FORBIDDEN');
     }
 

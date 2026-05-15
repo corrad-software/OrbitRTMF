@@ -62,6 +62,11 @@ class RtmfFrontend extends Model
         return $this->hasMany(RtmfFrontendItem::class, 'rtmf_frontend_id')->orderBy('sort_order')->orderBy('id');
     }
 
+    public function feedbacks(): HasMany
+    {
+        return $this->hasMany(RtmfFrontendFeedback::class, 'rtmf_frontend_id');
+    }
+
     public function linksFrom(): BelongsToMany
     {
         return $this->belongsToMany(

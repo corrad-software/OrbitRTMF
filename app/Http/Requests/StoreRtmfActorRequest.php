@@ -12,9 +12,10 @@ class StoreRtmfActorRequest extends BaseFormRequest
     public function rules(): array
     {
         return [
-            'name' => 'required|string|max:255|unique:rtmf_actors,name',
+            'project_id'  => 'nullable|integer|exists:rtmf_projects,id',
+            'name'        => 'required|string|max:255|unique:rtmf_actors,name',
             'description' => 'nullable|string',
-            'sort_order' => 'nullable|integer',
+            'sort_order'  => 'nullable|integer',
         ];
     }
 }

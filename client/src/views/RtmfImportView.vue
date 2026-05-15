@@ -105,31 +105,33 @@ const EXAMPLE = JSON.stringify({
       </div>
 
       <!-- Tab bar -->
-      <div class="flex overflow-hidden rounded-t-lg border border-slate-200 bg-slate-50">
-        <button
-          class="flex items-center gap-2 border-b-2 px-5 py-2.5 text-sm font-medium transition-colors"
-          :class="activeTab === 'run' ? 'border-violet-600 bg-white text-violet-700' : 'border-transparent text-slate-500 hover:bg-white hover:text-slate-700'"
-          @click="activeTab = 'run'"
-        >
-          <Upload class="h-4 w-4" />
-          Run Payload
-        </button>
-        <button
-          class="flex items-center gap-2 border-b-2 px-5 py-2.5 text-sm font-medium transition-colors"
-          :class="activeTab === 'queue' ? 'border-violet-600 bg-white text-violet-700' : 'border-transparent text-slate-500 hover:bg-white hover:text-slate-700'"
-          @click="activeTab = 'queue'"
-        >
-          <ListChecks class="h-4 w-4" />
-          Module Queue
-        </button>
-        <button
-          class="flex items-center gap-2 border-b-2 px-5 py-2.5 text-sm font-medium transition-colors"
-          :class="activeTab === 'manual' ? 'border-violet-600 bg-white text-violet-700' : 'border-transparent text-slate-500 hover:bg-white hover:text-slate-700'"
-          @click="activeTab = 'manual'"
-        >
-          <BookOpen class="h-4 w-4" />
-          User Manual
-        </button>
+      <div class="border-b border-slate-200">
+        <nav class="-mb-px flex gap-0 overflow-x-auto">
+          <button
+            class="flex shrink-0 items-center gap-2 border-b-2 px-5 py-2.5 text-sm font-medium transition-colors"
+            :class="activeTab === 'run' ? 'border-violet-600 text-violet-700' : 'border-transparent text-slate-500 hover:text-slate-700'"
+            @click="activeTab = 'run'"
+          >
+            <Upload class="h-4 w-4" />
+            Run Payload
+          </button>
+          <button
+            class="flex shrink-0 items-center gap-2 border-b-2 px-5 py-2.5 text-sm font-medium transition-colors"
+            :class="activeTab === 'queue' ? 'border-violet-600 text-violet-700' : 'border-transparent text-slate-500 hover:text-slate-700'"
+            @click="activeTab = 'queue'"
+          >
+            <ListChecks class="h-4 w-4" />
+            Module Queue
+          </button>
+          <button
+            class="flex shrink-0 items-center gap-2 border-b-2 px-5 py-2.5 text-sm font-medium transition-colors"
+            :class="activeTab === 'manual' ? 'border-violet-600 text-violet-700' : 'border-transparent text-slate-500 hover:text-slate-700'"
+            @click="activeTab = 'manual'"
+          >
+            <BookOpen class="h-4 w-4" />
+            User Manual
+          </button>
+        </nav>
       </div>
 
       <!-- ── Tab: Run Payload ─────────────────────────────────────────────── -->

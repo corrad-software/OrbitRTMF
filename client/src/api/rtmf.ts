@@ -27,11 +27,14 @@ import type {
   RtmfImportResult,
   RtmfFrontendApiEndpoint,
   RtmfFrontendApiEndpointInput,
+  RtmfProject,
+  RtmfProjectInput,
+  RtmfProjectMember,
 } from "@/types";
 
 // ── Dashboard ──
-export async function fetchRtmfDashboard() {
-  return apiRequest<{ data: RtmfDashboardSummary }>("/api/rtmf/dashboard");
+export async function fetchRtmfDashboard(params = "") {
+  return apiRequest<{ data: RtmfDashboardSummary }>(`/api/rtmf/dashboard${params}`);
 }
 
 // ── Frontends ──
@@ -340,4 +343,46 @@ export async function importRtmfCatalog(payload: unknown) {
     method: "POST",
     body: JSON.stringify(payload),
   });
+}
+
+// ── Projects ──
+export async function listRtmfProjects() {
+  return apiRequest<{ data: RtmfProject[] }>("/api/rtmf-projects");
+}
+
+export async function getRtmfProject(id: number) {
+  return apiRequest<{ data: RtmfProject }>(`/api/rtmf-projects/${id}`);
+}
+
+export async function createRtmfProject(input: RtmfProjectInput) {
+  return apiRequest<{ data: RtmfProject }>("/api/rtmf-projects", { method: "POST", body: JSON.stringify(input) });
+}
+
+export async function updateRtmfProject(id: number, input: RtmfProjectInput) {
+  return apiRequest<{ data: RtmfProject }>(`/api/rtmf-projects/${id}`, { method: "PUT", body: JSON.stringify(input) });
+}
+
+export async function deleteRtmfProject(id: number) {
+  return apiRequest<{ data: { success: boolean } }>(`/api/rtmf-projects/${id}`, { method: "DELETE" });
+}
+
+export async function listRtmfProjectMembers(projectId: number) {
+  return apiRequest<{ data: RtmfProjectMember[] }>(`/api/rtmf-projects/${projectId}/members`);
+}
+
+export async function listRtmfProjectCandidates(projectId: number, q = "") {
+  const params = q ? `?q=${encodeURIComponent(q)}` : "";
+  return apiRequest<{ data: RtmfProjectMember[] }>(`/api/rtmf-projects/${projectId}/candidates${params}`);
+}
+
+export async function addRtmfProjectMember(projectId: number, externalUserId: string, projectRole = "viewer") {
+  return apiRequest<{ data: { success: boolean } }>(`/api/rtmf-projects/${projectId}/members`, { method: "POST", body: JSON.stringify({ externalUserId, projectRole }) });
+}
+
+export async function updateRtmfProjectMember(projectId: number, userId: number, projectRole: string) {
+  return apiRequest<{ data: { success: boolean } }>(`/api/rtmf-projects/${projectId}/members/${userId}`, { method: "PATCH", body: JSON.stringify({ projectRole }) });
+}
+
+export async function removeRtmfProjectMember(projectId: number, userId: number) {
+  return apiRequest<{ data: { success: boolean } }>(`/api/rtmf-projects/${projectId}/members/${userId}`, { method: "DELETE" });
 }

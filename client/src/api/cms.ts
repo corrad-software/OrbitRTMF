@@ -212,3 +212,14 @@ export async function updateDevelopersGuide(content: string) {
     body: JSON.stringify({ content }),
   });
 }
+
+export async function getChangelog() {
+  return apiRequest<{ data: { content: string } }>("/api/changelog");
+}
+
+export async function updateChangelog(content: string) {
+  return apiRequest<{ data: { success: boolean } }>("/api/changelog", {
+    method: "PUT",
+    body: JSON.stringify({ content }),
+  });
+}

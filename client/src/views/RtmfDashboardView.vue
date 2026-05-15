@@ -1,57 +1,97 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import { useRouter } from "vue-router";
 import {
-  AppWindow, Users, Layers, TableProperties, ClipboardList,
-  ArrowRight, CheckCircle2, AlertCircle, XCircle, MinusCircle, CheckCheck,
+  AppWindow, Users, Layers, TableProperties,
+  ArrowRight, CheckCircle2, CheckCheck, RefreshCw,
+  ClipboardCheck, ShieldCheck, Wrench, FlaskConical, Code2,
 } from "lucide-vue-next";
 
 import AdminLayout from "@/layouts/AdminLayout.vue";
 import { fetchRtmfDashboard } from "@/api/rtmf";
+import { useRtmfProjectStore } from "@/stores/rtmfProject";
 import type { RtmfDashboardSummary } from "@/types";
 
 const router = useRouter();
+const projectStore = useRtmfProjectStore();
 
 const summary = ref<RtmfDashboardSummary | null>(null);
+const loading = ref(false);
+let loadSeq = 0;
 
-onMounted(async () => {
-  const res = await fetchRtmfDashboard();
-  summary.value = res.data;
+async function load() {
+  const seq = ++loadSeq;
+  loading.value = true;
+  try {
+    const pid = projectStore.activeProjectId;
+    const params = pid ? `?project_id=${pid}` : "";
+    const res = await fetchRtmfDashboard(params);
+    if (seq === loadSeq) summary.value = res.data;
+  } finally {
+    if (seq === loadSeq) loading.value = false;
+  }
+}
+
+onMounted(load);
+watch(() => projectStore.activeProjectId, load);
+
+const donePercent = computed(() => {
+  const t = summary.value?.totals;
+  if (!t || t.frontends === 0) return 0;
+  return Math.round((t.done / t.frontends) * 100);
 });
 
-const totalItemsForBar = computed(() => {
-  if (!summary.value) return 1;
-  const s = summary.value.itemsByStatus;
+const approvedAllPercent = computed(() => {
+  const t = summary.value?.totals;
+  if (!t || t.frontends === 0) return 0;
+  return Math.round((t.approvedAll / t.frontends) * 100);
+});
+
+const totalItems = computed(() => {
+  const s = summary.value?.itemsByStatus;
+  if (!s) return 1;
   return (s.implemented + s.partial + s.missing + s.unset) || 1;
 });
 
-function pct(n: number) {
-  return ((n / totalItemsForBar.value) * 100).toFixed(1);
-}
-
-const donePct = computed(() => {
-  if (!summary.value) return 0;
-  const { frontends, done } = summary.value.totals;
-  return frontends ? Math.round((done / frontends) * 100) : 0;
+const reviewRoles = computed(() => {
+  const r = summary.value?.byReview;
+  const total = summary.value?.totals.frontends ?? 0;
+  if (!r) return [];
+  return [
+    { key: 'business_analyst', label: 'Business Analyst', icon: ClipboardCheck, color: 'violet', stat: r.businessAnalyst },
+    { key: 'qa',               label: 'QA',               icon: FlaskConical,   color: 'sky',    stat: r.qa },
+    { key: 'technical',        label: 'Technical',        icon: Wrench,         color: 'amber',  stat: r.technical },
+    { key: 'developer',        label: 'Developer',        icon: Code2,          color: 'green',  stat: r.developer },
+  ].map(role => ({
+    ...role,
+    total,
+    approvedPct: total ? Math.round((role.stat.approved / total) * 100) : 0,
+  }));
 });
 
-function donePctMod(done: number, total: number) {
-  if (!total) return 0;
-  return Math.round((done / total) * 100);
+function itemPct(v: number) {
+  return Math.round((v / totalItems.value) * 100);
 }
 
-function implPct(implemented: number, total: number) {
-  if (!total) return "—";
-  return ((implemented / total) * 100).toFixed(0) + "%";
-}
-
-function implColor(implemented: number, total: number) {
-  if (!total) return "text-slate-400";
-  const p = (implemented / total) * 100;
-  if (p >= 80) return "text-emerald-600 font-semibold";
-  if (p >= 40) return "text-amber-600 font-semibold";
-  return "text-rose-600 font-semibold";
-}
+const colorMap: Record<string, string> = {
+  violet: 'bg-violet-600',
+  sky:    'bg-sky-500',
+  amber:  'bg-amber-500',
+  emerald:'bg-emerald-500',
+  green:  'bg-green-600',
+};
+const textMap: Record<string, string> = {
+  violet: 'text-violet-700',
+  sky:    'text-sky-700',
+  amber:  'text-amber-700',
+  green:  'text-green-700',
+};
+const bgMap: Record<string, string> = {
+  violet: 'bg-violet-50 border-violet-200',
+  sky:    'bg-sky-50 border-sky-200',
+  amber:  'bg-amber-50 border-amber-200',
+  green:  'bg-green-50 border-green-200',
+};
 </script>
 
 <template>
@@ -59,224 +99,206 @@ function implColor(implemented: number, total: number) {
     <div class="mx-auto max-w-7xl space-y-4">
 
       <!-- Header -->
-      <div class="flex items-center justify-between">
+      <div class="flex items-start justify-between">
         <div>
           <h1 class="page-title">Page Catalog Dashboard</h1>
-          <p class="mt-0.5 text-sm text-slate-500">Page catalog overview &amp; implementation status</p>
+          <p class="mt-0.5 text-sm text-slate-500">Progress overview — pages, review status, and implementation</p>
         </div>
         <button
-          class="flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 shadow-sm transition-colors hover:bg-slate-50"
-          @click="router.push('/admin/rtmf/frontends')"
+          @click="load"
+          :disabled="loading"
+          class="flex items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 shadow-sm transition-colors hover:bg-slate-50 disabled:opacity-50"
         >
-          <AppWindow class="h-3.5 w-3.5" />
-          View Catalog
+          <RefreshCw class="h-3.5 w-3.5" :class="loading ? 'animate-spin' : ''" />
+          Refresh
         </button>
       </div>
 
-      <!-- Stat Cards -->
-      <div v-if="summary" class="grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
-        <div class="rounded-lg border border-violet-200 bg-violet-50 p-3 shadow-sm">
-          <div class="flex h-7 w-7 items-center justify-center rounded-md bg-violet-100">
-            <AppWindow class="h-3.5 w-3.5 text-violet-600" />
-          </div>
-          <p class="mt-2 text-2xl font-bold text-slate-900">{{ summary.totals.frontends }}</p>
-          <p class="mt-0.5 text-xs text-slate-500">Pages</p>
-        </div>
-        <div class="rounded-lg border border-emerald-200 bg-emerald-50 p-3 shadow-sm">
-          <div class="flex h-7 w-7 items-center justify-center rounded-md bg-emerald-100">
-            <CheckCheck class="h-3.5 w-3.5 text-emerald-600" />
-          </div>
-          <p class="mt-2 text-2xl font-bold text-slate-900">{{ summary.totals.done }}</p>
-          <p class="mt-0.5 text-xs text-slate-500">Completed <span class="text-emerald-600 font-medium">({{ donePct }}%)</span></p>
-        </div>
-        <div class="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
-          <div class="flex h-7 w-7 items-center justify-center rounded-md bg-blue-100">
-            <Layers class="h-3.5 w-3.5 text-blue-600" />
-          </div>
-          <p class="mt-2 text-2xl font-bold text-slate-900">{{ summary.totals.modules }}</p>
-          <p class="mt-0.5 text-xs text-slate-500">Modules</p>
-        </div>
-        <div class="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
-          <div class="flex h-7 w-7 items-center justify-center rounded-md bg-amber-100">
-            <Users class="h-3.5 w-3.5 text-amber-600" />
-          </div>
-          <p class="mt-2 text-2xl font-bold text-slate-900">{{ summary.totals.actors }}</p>
-          <p class="mt-0.5 text-xs text-slate-500">Actors</p>
-        </div>
-        <div class="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
-          <div class="flex h-7 w-7 items-center justify-center rounded-md bg-slate-100">
-            <TableProperties class="h-3.5 w-3.5 text-slate-600" />
-          </div>
-          <p class="mt-2 text-2xl font-bold text-slate-900">{{ summary.totals.items }}</p>
-          <p class="mt-0.5 text-xs text-slate-500">Form Items</p>
-        </div>
-        <div class="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
-          <div class="flex h-7 w-7 items-center justify-center rounded-md bg-teal-100">
-            <ClipboardList class="h-3.5 w-3.5 text-teal-600" />
-          </div>
-          <p class="mt-2 text-2xl font-bold text-slate-900">{{ summary.totals.scenarios }}</p>
-          <p class="mt-0.5 text-xs text-slate-500">Scenario Groups</p>
-        </div>
-      </div>
-      <div v-else class="grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
-        <div v-for="i in 6" :key="i" class="h-20 animate-pulse rounded-lg bg-slate-100" />
-      </div>
+      <template v-if="summary">
 
-      <!-- Completion banner -->
-      <div v-if="summary" class="rounded-lg border border-slate-200 bg-white px-4 py-3 shadow-sm">
-        <div class="mb-2 flex items-center justify-between">
-          <span class="text-xs font-semibold text-slate-700">Overall Completion</span>
-          <span class="text-xs font-semibold" :class="donePct >= 80 ? 'text-emerald-600' : donePct >= 40 ? 'text-amber-600' : 'text-slate-500'">
-            {{ summary.totals.done }} / {{ summary.totals.frontends }} pages done ({{ donePct }}%)
-          </span>
+        <!-- Top KPI row -->
+        <div class="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+          <div class="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+            <div class="flex items-center justify-between">
+              <p class="text-[11px] text-slate-500">Total Pages</p>
+              <AppWindow class="h-3.5 w-3.5 text-slate-400" />
+            </div>
+            <p class="mt-1 text-xl font-semibold text-slate-800">{{ summary.totals.frontends }}</p>
+          </div>
+          <div class="rounded-lg border border-emerald-200 bg-emerald-50 p-3 shadow-sm">
+            <div class="flex items-center justify-between">
+              <p class="text-[11px] text-emerald-600">Done</p>
+              <CheckCircle2 class="h-3.5 w-3.5 text-emerald-500" />
+            </div>
+            <p class="mt-1 text-xl font-semibold text-emerald-700">{{ summary.totals.done }}</p>
+            <p class="text-[10px] text-emerald-500">{{ donePercent }}%</p>
+          </div>
+          <div class="rounded-lg border border-violet-200 bg-violet-50 p-3 shadow-sm">
+            <div class="flex items-center justify-between">
+              <p class="text-[11px] text-violet-600">All Approved</p>
+              <CheckCheck class="h-3.5 w-3.5 text-violet-500" />
+            </div>
+            <p class="mt-1 text-xl font-semibold text-violet-700">{{ summary.totals.approvedAll }}</p>
+            <p class="text-[10px] text-violet-500">{{ approvedAllPercent }}%</p>
+          </div>
+          <div class="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+            <div class="flex items-center justify-between">
+              <p class="text-[11px] text-slate-500">Modules</p>
+              <Layers class="h-3.5 w-3.5 text-slate-400" />
+            </div>
+            <p class="mt-1 text-xl font-semibold text-slate-800">{{ summary.totals.modules }}</p>
+          </div>
+          <div class="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+            <div class="flex items-center justify-between">
+              <p class="text-[11px] text-slate-500">Actors</p>
+              <Users class="h-3.5 w-3.5 text-slate-400" />
+            </div>
+            <p class="mt-1 text-xl font-semibold text-slate-800">{{ summary.totals.actors }}</p>
+          </div>
+          <div class="rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+            <div class="flex items-center justify-between">
+              <p class="text-[11px] text-slate-500">Items</p>
+              <TableProperties class="h-3.5 w-3.5 text-slate-400" />
+            </div>
+            <p class="mt-1 text-xl font-semibold text-slate-800">{{ summary.totals.items }}</p>
+          </div>
         </div>
-        <div class="h-2.5 w-full overflow-hidden rounded-full bg-slate-100">
+
+        <!-- Review status cards -->
+        <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           <div
-            class="h-full rounded-full transition-all"
-            :class="donePct >= 80 ? 'bg-emerald-500' : donePct >= 40 ? 'bg-amber-400' : 'bg-violet-400'"
-            :style="{ width: donePct + '%' }"
-          />
+            v-for="role in reviewRoles"
+            :key="role.key"
+            class="rounded-lg border p-4 shadow-sm"
+            :class="bgMap[role.color]"
+          >
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2">
+                <component :is="role.icon" class="h-4 w-4" :class="textMap[role.color]" />
+                <p class="text-sm font-semibold" :class="textMap[role.color]">{{ role.label }}</p>
+              </div>
+              <span class="text-xs font-semibold" :class="textMap[role.color]">{{ role.approvedPct }}% approved</span>
+            </div>
+            <div class="mt-3 flex items-center gap-1">
+              <div class="h-1.5 flex-1 overflow-hidden rounded-full bg-white/60">
+                <div
+                  class="h-full rounded-full transition-all"
+                  :class="colorMap[role.color]"
+                  :style="{ width: role.approvedPct + '%' }"
+                />
+              </div>
+            </div>
+            <div class="mt-3 grid grid-cols-3 gap-2 text-center">
+              <div>
+                <p class="text-base font-semibold" :class="textMap[role.color]">{{ role.stat.approved }}</p>
+                <p class="text-[10px] text-slate-500">Approved</p>
+              </div>
+              <div>
+                <p class="text-base font-semibold text-slate-600">{{ role.stat.reviewed }}</p>
+                <p class="text-[10px] text-slate-500">Reviewed</p>
+              </div>
+              <div>
+                <p class="text-base font-semibold text-slate-400">{{ role.stat.open }}</p>
+                <p class="text-[10px] text-slate-500">Open</p>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
 
-      <div class="grid gap-4 lg:grid-cols-2">
+        <!-- Item implementation + Module breakdown -->
+        <div class="grid gap-4 lg:grid-cols-3">
 
-        <!-- Form Items Status -->
-        <article class="rounded-lg border border-slate-200 bg-white shadow-sm">
-          <div class="flex items-center gap-2 border-b border-slate-100 px-4 py-2.5">
-            <TableProperties class="h-4 w-4 text-violet-600" />
-            <h2 class="text-sm font-semibold text-slate-900">Form Items — Implementation Status</h2>
-          </div>
-          <div v-if="summary" class="space-y-3 p-4">
-            <div class="flex h-3 w-full overflow-hidden rounded-full bg-slate-100">
-              <div class="h-full bg-emerald-500 transition-all" :style="{ width: pct(summary.itemsByStatus.implemented) + '%' }" />
-              <div class="h-full bg-amber-400 transition-all" :style="{ width: pct(summary.itemsByStatus.partial) + '%' }" />
-              <div class="h-full bg-rose-400 transition-all" :style="{ width: pct(summary.itemsByStatus.missing) + '%' }" />
+          <!-- Item status breakdown -->
+          <div class="rounded-lg border border-slate-200 bg-white shadow-sm">
+            <div class="flex items-center gap-2 border-b border-slate-100 px-4 py-2.5">
+              <TableProperties class="h-4 w-4 text-slate-400" />
+              <h2 class="text-sm font-semibold text-slate-800">Item Implementation</h2>
             </div>
-            <div class="space-y-2">
-              <div class="flex items-center justify-between text-xs">
-                <div class="flex items-center gap-2"><CheckCircle2 class="h-3.5 w-3.5 text-emerald-500" /><span class="text-slate-600">Implemented</span></div>
-                <span class="font-semibold text-slate-800">{{ summary.itemsByStatus.implemented }} <span class="font-normal text-slate-400">({{ pct(summary.itemsByStatus.implemented) }}%)</span></span>
-              </div>
-              <div class="flex items-center justify-between text-xs">
-                <div class="flex items-center gap-2"><AlertCircle class="h-3.5 w-3.5 text-amber-500" /><span class="text-slate-600">Partial</span></div>
-                <span class="font-semibold text-slate-800">{{ summary.itemsByStatus.partial }} <span class="font-normal text-slate-400">({{ pct(summary.itemsByStatus.partial) }}%)</span></span>
-              </div>
-              <div class="flex items-center justify-between text-xs">
-                <div class="flex items-center gap-2"><XCircle class="h-3.5 w-3.5 text-rose-500" /><span class="text-slate-600">Missing</span></div>
-                <span class="font-semibold text-slate-800">{{ summary.itemsByStatus.missing }} <span class="font-normal text-slate-400">({{ pct(summary.itemsByStatus.missing) }}%)</span></span>
-              </div>
-              <div class="flex items-center justify-between text-xs">
-                <div class="flex items-center gap-2"><MinusCircle class="h-3.5 w-3.5 text-slate-400" /><span class="text-slate-600">Unset</span></div>
-                <span class="font-semibold text-slate-800">{{ summary.itemsByStatus.unset }} <span class="font-normal text-slate-400">({{ pct(summary.itemsByStatus.unset) }}%)</span></span>
+            <div class="space-y-3 p-4">
+              <div v-for="(item, key) in [
+                { label: 'Implemented', value: summary.itemsByStatus.implemented, color: 'bg-emerald-500', text: 'text-emerald-600' },
+                { label: 'Partial',     value: summary.itemsByStatus.partial,     color: 'bg-amber-400',  text: 'text-amber-600' },
+                { label: 'Missing',     value: summary.itemsByStatus.missing,     color: 'bg-rose-500',   text: 'text-rose-600' },
+                { label: 'Unset',       value: summary.itemsByStatus.unset,       color: 'bg-slate-300',  text: 'text-slate-500' },
+              ]" :key="key" class="space-y-1">
+                <div class="flex items-center justify-between text-xs">
+                  <span class="text-slate-600">{{ item.label }}</span>
+                  <span class="font-semibold" :class="item.text">{{ item.value }} <span class="font-normal text-slate-400">({{ itemPct(item.value) }}%)</span></span>
+                </div>
+                <div class="h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
+                  <div class="h-full rounded-full transition-all" :class="item.color" :style="{ width: itemPct(item.value) + '%' }" />
+                </div>
               </div>
             </div>
           </div>
-          <div v-else class="space-y-2 p-4">
-            <div v-for="i in 4" :key="i" class="h-4 animate-pulse rounded bg-slate-100" />
-          </div>
-        </article>
 
-        <!-- Actor Coverage -->
-        <article class="rounded-lg border border-slate-200 bg-white shadow-sm">
+          <!-- Module breakdown -->
+          <div class="rounded-lg border border-slate-200 bg-white shadow-sm lg:col-span-2">
+            <div class="flex items-center justify-between border-b border-slate-100 px-4 py-2.5">
+              <div class="flex items-center gap-2">
+                <Layers class="h-4 w-4 text-slate-400" />
+                <h2 class="text-sm font-semibold text-slate-800">By Module</h2>
+              </div>
+              <button class="flex items-center gap-1 text-xs text-slate-400 transition-colors hover:text-slate-600" @click="router.push('/admin/rtmf/modules')">
+                View all <ArrowRight class="h-3 w-3" />
+              </button>
+            </div>
+            <div class="divide-y divide-slate-100">
+              <div
+                v-for="mod in summary.byModule"
+                :key="mod.id"
+                class="flex items-center gap-3 px-4 py-2.5 transition-colors hover:bg-slate-50"
+              >
+                <div class="w-16 shrink-0">
+                  <span class="rounded bg-slate-100 px-1.5 py-0.5 font-mono text-[10px] text-slate-600">{{ mod.code }}</span>
+                </div>
+                <div class="min-w-0 flex-1">
+                  <p class="truncate text-xs font-medium text-slate-800">{{ mod.name }}</p>
+                  <div class="mt-1 h-1 w-full overflow-hidden rounded-full bg-slate-100">
+                    <div
+                      class="h-full rounded-full bg-emerald-500 transition-all"
+                      :style="{ width: mod.frontendsCount ? Math.round((mod.doneCount / mod.frontendsCount) * 100) + '%' : '0%' }"
+                    />
+                  </div>
+                </div>
+                <div class="shrink-0 text-right">
+                  <p class="text-xs font-semibold text-slate-700">{{ mod.doneCount }}/{{ mod.frontendsCount }}</p>
+                  <p class="text-[10px] text-slate-400">pages done</p>
+                </div>
+              </div>
+              <div v-if="summary.byModule.length === 0" class="px-4 py-6 text-center text-xs text-slate-400">No modules.</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Actor coverage -->
+        <div class="rounded-lg border border-slate-200 bg-white shadow-sm">
           <div class="flex items-center justify-between border-b border-slate-100 px-4 py-2.5">
             <div class="flex items-center gap-2">
-              <Users class="h-4 w-4 text-amber-600" />
-              <h2 class="text-sm font-semibold text-slate-900">Pages by Actor</h2>
+              <Users class="h-4 w-4 text-slate-400" />
+              <h2 class="text-sm font-semibold text-slate-800">Actor Coverage</h2>
             </div>
-            <button class="flex items-center gap-1 text-xs font-medium text-slate-500 transition-colors hover:text-slate-900" @click="router.push('/admin/rtmf/actors')">
-              Manage <ArrowRight class="h-3 w-3" />
+            <button class="flex items-center gap-1 text-xs text-slate-400 transition-colors hover:text-slate-600" @click="router.push('/admin/rtmf/actors')">
+              View all <ArrowRight class="h-3 w-3" />
             </button>
           </div>
-          <div v-if="summary" class="divide-y divide-slate-50">
-            <div v-for="actor in summary.byActor" :key="actor.id" class="flex items-center justify-between px-4 py-2.5">
-              <span class="text-sm text-slate-700">{{ actor.name }}</span>
-              <span class="rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700">{{ actor.frontendsCount }}</span>
+          <div class="flex flex-wrap gap-2 p-4">
+            <div
+              v-for="actor in summary.byActor"
+              :key="actor.id"
+              class="flex items-center gap-1.5 rounded-md border border-slate-200 bg-slate-50 px-3 py-1.5"
+            >
+              <Users class="h-3 w-3 text-slate-400" />
+              <span class="text-xs font-medium text-slate-700">{{ actor.name }}</span>
+              <span class="rounded-full bg-slate-200 px-1.5 py-px text-[10px] font-semibold text-slate-600">{{ actor.frontendsCount }}</span>
             </div>
-            <div v-if="summary.byActor.length === 0" class="px-4 py-6 text-center text-sm text-slate-400">No actors defined.</div>
+            <div v-if="summary.byActor.length === 0" class="text-xs text-slate-400">No actors.</div>
           </div>
-          <div v-else class="space-y-2 p-4">
-            <div v-for="i in 4" :key="i" class="h-7 animate-pulse rounded bg-slate-100" />
-          </div>
-        </article>
+        </div>
 
-      </div>
+      </template>
 
-      <!-- Module Breakdown Table -->
-      <article class="rounded-lg border border-slate-200 bg-white shadow-sm">
-        <div class="flex items-center justify-between border-b border-slate-100 px-4 py-2.5">
-          <div class="flex items-center gap-2">
-            <Layers class="h-4 w-4 text-blue-600" />
-            <h2 class="text-sm font-semibold text-slate-900">Progress by Module</h2>
-          </div>
-          <button class="flex items-center gap-1 text-xs font-medium text-slate-500 transition-colors hover:text-slate-900" @click="router.push('/admin/rtmf/modules')">
-            Manage <ArrowRight class="h-3 w-3" />
-          </button>
-        </div>
-        <div v-if="summary" class="overflow-x-auto">
-          <table class="w-full min-w-[600px] text-sm">
-            <thead>
-              <tr class="border-b border-slate-100 bg-slate-50 text-xs font-medium text-slate-500">
-                <th class="px-4 py-2 text-left">Module</th>
-                <th class="px-4 py-2 text-right">Pages</th>
-                <th class="px-4 py-2 text-center">Done</th>
-                <th class="px-4 py-2 text-right">Form Items</th>
-                <th class="px-4 py-2 text-right">Implemented</th>
-                <th class="px-4 py-2 text-right">Progress</th>
-              </tr>
-            </thead>
-            <tbody class="divide-y divide-slate-50">
-              <tr
-                v-for="mod in summary.byModule" :key="mod.id"
-                class="cursor-pointer transition-colors hover:bg-slate-50"
-                @click="router.push(`/admin/rtmf/frontends?module_id=${mod.id}`)"
-              >
-                <td class="px-4 py-2.5">
-                  <span class="mr-1.5 font-mono text-xs text-slate-400">{{ mod.code }}</span>
-                  <span class="text-slate-700">{{ mod.name }}</span>
-                </td>
-                <td class="px-4 py-2.5 text-right text-slate-600">{{ mod.frontendsCount }}</td>
-                <td class="px-4 py-2.5 text-center">
-                  <div class="inline-flex items-center gap-1.5">
-                    <span class="text-xs font-medium" :class="mod.doneCount === mod.frontendsCount && mod.frontendsCount > 0 ? 'text-emerald-600' : 'text-slate-600'">
-                      {{ mod.doneCount }}/{{ mod.frontendsCount }}
-                    </span>
-                    <div class="h-1.5 w-12 overflow-hidden rounded-full bg-slate-100">
-                      <div
-                        class="h-full rounded-full transition-all"
-                        :class="donePctMod(mod.doneCount, mod.frontendsCount) >= 80 ? 'bg-emerald-500' : donePctMod(mod.doneCount, mod.frontendsCount) >= 40 ? 'bg-amber-400' : 'bg-slate-300'"
-                        :style="{ width: donePctMod(mod.doneCount, mod.frontendsCount) + '%' }"
-                      />
-                    </div>
-                  </div>
-                </td>
-                <td class="px-4 py-2.5 text-right text-slate-600">{{ mod.itemsCount }}</td>
-                <td class="px-4 py-2.5 text-right text-slate-600">{{ mod.implementedCount }}</td>
-                <td class="px-4 py-2.5 text-right">
-                  <div class="flex items-center justify-end gap-2">
-                    <div class="h-1.5 w-20 overflow-hidden rounded-full bg-slate-100">
-                      <div
-                        class="h-full rounded-full transition-all"
-                        :class="mod.itemsCount && (mod.implementedCount / mod.itemsCount) >= 0.8 ? 'bg-emerald-500' : mod.itemsCount && (mod.implementedCount / mod.itemsCount) >= 0.4 ? 'bg-amber-400' : 'bg-rose-400'"
-                        :style="{ width: mod.itemsCount ? ((mod.implementedCount / mod.itemsCount) * 100) + '%' : '0%' }"
-                      />
-                    </div>
-                    <span class="w-9 text-right text-xs" :class="implColor(mod.implementedCount, mod.itemsCount)">
-                      {{ implPct(mod.implementedCount, mod.itemsCount) }}
-                    </span>
-                  </div>
-                </td>
-              </tr>
-              <tr v-if="summary.byModule.length === 0">
-                <td colspan="6" class="px-4 py-6 text-center text-sm text-slate-400">No modules defined.</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-        <div v-else class="space-y-2 p-4">
-          <div v-for="i in 5" :key="i" class="h-8 animate-pulse rounded bg-slate-100" />
-        </div>
-      </article>
+      <div v-else-if="loading" class="py-16 text-center text-sm text-slate-400">Loading…</div>
 
     </div>
   </AdminLayout>

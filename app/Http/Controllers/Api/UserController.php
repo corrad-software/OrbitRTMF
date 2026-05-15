@@ -24,7 +24,7 @@ class UserController extends Controller
             'name' => $user->name,
             'email' => $user->email,
             'role' => $user->role,
-            'photo_url' => $user->photo_url,
+            'photo_url' => $user->photo_url ? url($user->photo_url) : null,
             'is_active' => $user->is_active,
             'created_at' => $user->created_at,
             'updated_at' => $user->updated_at,

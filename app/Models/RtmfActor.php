@@ -11,7 +11,7 @@ class RtmfActor extends Model
 {
     use SoftDeletes, Auditable;
 
-    protected $fillable = ['name', 'description', 'sort_order'];
+    protected $fillable = ['project_id', 'name', 'description', 'sort_order'];
 
     protected function casts(): array
     {
