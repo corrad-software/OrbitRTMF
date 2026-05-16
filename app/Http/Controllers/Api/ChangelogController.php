@@ -20,12 +20,8 @@ class ChangelogController extends Controller
     {
         $path = $this->path();
 
-        if (! file_exists($path)) {
-            return $this->sendError(404, 'NOT_FOUND', 'CHANGELOG.md not found');
-        }
-
         return $this->sendOk([
-            'content' => file_get_contents($path),
+            'content' => file_exists($path) ? file_get_contents($path) : '',
         ]);
     }
 
@@ -35,7 +31,11 @@ class ChangelogController extends Controller
             'content' => 'required|string|min:1',
         ]);
 
-        file_put_contents($this->path(), $request->input('content'));
+        $path = $this->path();
+        if (! is_dir(dirname($path))) {
+            mkdir(dirname($path), 0755, true);
+        }
+        file_put_contents($path, $request->input('content'));
 
         return $this->sendOk(['success' => true]);
     }
