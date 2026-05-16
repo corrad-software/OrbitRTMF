@@ -61,7 +61,10 @@ watch(q, () => {
   searchTimer = setTimeout(resetAndLoad, 350);
 });
 
+watch(() => projectStore.activeProjectId, resetAndLoad);
+
 onMounted(async () => {
+  await projectStore.loadProjects();
   try {
     const pid = projectStore.activeProjectId;
     const modParams = pid ? `?project_id=${pid}` : "";
