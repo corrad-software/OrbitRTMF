@@ -126,7 +126,7 @@ async function confirmAdd() {
   const user = selectedUser.value;
   adding.value = true;
   try {
-    await addRtmfProjectMember(projectId, user.id, addRole.value);
+    await addRtmfProjectMember(projectId, { userId: user.id, projectRole: addRole.value });
     await loadMembers();
     toast.success(`${user.name} added as ${roleLabelFor(addRole.value)}`);
     clearSelection();
@@ -144,7 +144,7 @@ function startEditRole(member: RtmfProjectMember) {
 
 async function saveRole(member: RtmfProjectMember) {
   try {
-    await updateRtmfProjectMember(projectId, member.id, editingRole.value);
+    await updateRtmfProjectMember(projectId, member.id, { projectRole: editingRole.value });
     const m = members.value.find((m) => m.id === member.id);
     if (m) m.projectRole = editingRole.value;
     toast.success(`${member.name}'s role updated`);

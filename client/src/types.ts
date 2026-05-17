@@ -51,6 +51,7 @@ export type RtmfModule = {
 
 export type RtmfActor = {
   id: number;
+  projectId?: number;
   name: string;
   description?: string | null;
   sortOrder: number;

@@ -38,7 +38,7 @@ import {
   getRtmfIncomingLinks,
 } from "@/api/rtmf";
 import { listUsers, listExternalUsers } from "@/api/cms";
-import type { RtmfActor, RtmfApiEndpointMethod, RtmfAttachment, RtmfFrontend, RtmfFrontendApiEndpoint, RtmfFrontendAssignee, RtmfFrontendFeedback, RtmfFrontendFeedbackStatus, RtmfFrontendItem, RtmfFrontendScenarioGroup, RtmfFrontendScenarioRow, RtmfModule, RtmfSubModule } from "@/types";
+import type { RtmfActor, RtmfApiEndpointMethod, RtmfAttachment, RtmfFrontend, RtmfFrontendApiEndpoint, RtmfFrontendAssignee, RtmfFrontendFeedback, RtmfFrontendFeedbackRole, RtmfFrontendFeedbackStatus, RtmfFrontendItem, RtmfFrontendScenarioGroup, RtmfFrontendScenarioRow, RtmfModule, RtmfSubModule } from "@/types";
 import { useConfirmDialog } from "@/composables/useConfirmDialog";
 import { useToast } from "@/composables/useToast";
 import { useAuthStore } from "@/stores/auth";
@@ -137,6 +137,10 @@ function openCondDropdown(e: Event, itemId: number, li: number) {
   const rect = el.getBoundingClientRect();
   condDropdown.value = { itemId, li, x: rect.left, y: rect.bottom, width: rect.width, el };
   window.addEventListener('scroll', updateCondDropdownPos, true);
+}
+
+function scheduleCloseCondDropdown() {
+  window.setTimeout(closeCondDropdown, 150);
 }
 
 function closeCondDropdown() {
@@ -582,12 +586,12 @@ function canEditFeedbackRow(roleKey: string): boolean {
   return pr === 'admin' || pr === roleKey;
 }
 
-function feedbackFor(role: string) {
+function feedbackFor(role: RtmfFrontendFeedbackRole) {
   return feedbacks.value.find(f => f.role === role)
     ?? { id: 0, role, status: 'open', comment: null } as unknown as RtmfFrontendFeedback;
 }
 
-async function saveFeedback(role: string, patch: { status?: string; comment?: string | null }) {
+async function saveFeedback(role: RtmfFrontendFeedbackRole, patch: { status?: RtmfFrontendFeedbackStatus; comment?: string | null }) {
   const fb = feedbackFor(role);
   const payload = { status: fb.status, comment: fb.comment, ...patch };
   try {
@@ -1403,7 +1407,7 @@ onMounted(async () => {
                         placeholder="Search page…"
                         @input="openCondDropdown($event, item.id, li)"
                         @focus="openCondDropdown($event, item.id, li)"
-                        @blur="setTimeout(closeCondDropdown, 150)"
+                        @blur="scheduleCloseCondDropdown"
                       />
                     </div>
                   </div>
