@@ -31,6 +31,7 @@ use App\Http\Controllers\Api\RtmfScenarioAttachmentController;
 use App\Http\Controllers\Api\RtmfScenarioStepLinkController;
 use App\Http\Controllers\Api\RtmfFrontendApiEndpointController;
 use App\Http\Controllers\Api\RtmfFrontendFeedbackController;
+use App\Http\Controllers\Api\AllAttachmentsController;
 use App\Http\Controllers\Api\RtmfProjectController;
 use App\Http\Controllers\Api\RtmfUrlPathController;
 use App\Http\Controllers\Api\SettingController;
@@ -172,6 +173,10 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::patch('/rtmf-projects/{id}/members/{userId}', [RtmfProjectController::class, 'updateMember']);
         Route::delete('/rtmf-projects/{id}/members/{userId}', [RtmfProjectController::class, 'removeMember']);
     });
+
+    // Admin media library — aggregated view across all upload sources (admin only)
+    Route::get('/admin/all-attachments', [AllAttachmentsController::class, 'index'])
+        ->middleware('permission:media.view');
 
     Route::get('/media', [MediaController::class, 'index']);
     Route::post('/media/upload', [MediaController::class, 'upload']);

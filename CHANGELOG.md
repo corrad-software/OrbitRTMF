@@ -9,6 +9,13 @@ All notable changes to this project are documented in this file.
 - Redesign topbar with a darker "PowerBar" concept.
 - Build notification module and add topbar notifications dropdown (similar to settings) showing the latest 5 notifications.
 
+## [1.2.5] - 2026-05-17
+
+### Added
+- **Media Library** page under the Administration menu (`/admin/administration/media-library`) — admin-only view that aggregates all uploaded files across the system: CMS Media, Page Attachments, Module Photos, Sub-Module Photos, and Scenario Attachments. Features grid/list toggle, search by filename, filter by source, color-coded source badges, image thumbnails, file size/date, and pagination.
+- `GET /api/admin/all-attachments` backend endpoint (`AllAttachmentsController`) — aggregates from all five attachment tables with support for `q`, `source`, `page`, and `sort_dir` query params. Protected by `auth:sanctum` + `permission:media.view`.
+- `AllAttachment` TypeScript type and `listAllAttachments()` API function added.
+
 ## [1.2.4] - 2026-05-17
 
 ### Added

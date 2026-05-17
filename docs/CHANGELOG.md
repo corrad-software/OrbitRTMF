@@ -1,5 +1,17 @@
 # Changelog
 
+## [2026-05-17] — Media Library (Admin)
+
+### Added
+- **Media Library** page under the Administration menu (`/admin/administration/media-library`) — admin-only view that aggregates all uploaded files across the system in one place. Covers five sources: CMS Media (`uploads/`), Page Attachments (`rtmf-attachments/`), Module Photos (`rtmf-module-photos/`), Sub-Module Photos (`rtmf-submodule-photos/`), and Scenario Attachments.
+- **Grid / List toggle** — switch between thumbnail grid and detail table view.
+- **Filter bar** — search by filename and filter by source type. Color-coded source badges identify each file's origin.
+- **Pagination** — 60 files per page, sorted newest-first by default.
+- `GET /api/admin/all-attachments` backend endpoint (`AllAttachmentsController`) — aggregates from all five attachment tables with `q`, `source`, `page`, and `sort_dir` query params. Protected by `auth:sanctum` + `permission:media.view`.
+- `AllAttachment` TypeScript type and `listAllAttachments()` API function.
+
+---
+
 ## [2026-05-17] — Pagination Fix, Storage Link, Relations Diagram, Feedback Labels
 
 ### Fixed

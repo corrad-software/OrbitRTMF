@@ -13,6 +13,7 @@ import {
   Gauge,
   GitBranch,
   GitPullRequest,
+  HardDrive,
   Image,
   BarChart2,
   LayoutDashboard,
@@ -123,6 +124,7 @@ export const DEFAULT_MENU: MenuGroupDef[] = [
         ],
       },
       { id: "platform-rbac", label: "RBAC", to: "/admin/platform/identity/roles", icon: PieChart },
+      { id: "admin-media-library", label: "Media Library", to: "/admin/administration/media-library", icon: HardDrive, adminOnly: true },
       { id: "menus", label: "Menus", to: "/admin/menus", icon: Menu },
       {
         id: "settings",
