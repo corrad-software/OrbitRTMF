@@ -1,5 +1,6 @@
 import { apiRequest } from "./client";
 import type {
+  AllAttachment,
   AuditLog,
   Category,
   CategoryInput,
@@ -222,4 +223,8 @@ export async function updateChangelog(content: string) {
     method: "PUT",
     body: JSON.stringify({ content }),
   });
+}
+
+export async function listAllAttachments(params = "") {
+  return apiRequest<{ data: AllAttachment[]; meta: Record<string, unknown> }>(`/api/admin/all-attachments${params}`);
 }

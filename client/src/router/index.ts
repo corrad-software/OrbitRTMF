@@ -6,6 +6,7 @@ import MainDashboardView from "@/views/MainDashboardView.vue";
 import KitchenChartsView from "@/views/KitchenChartsView.vue";
 import KitchenFormsView from "@/views/KitchenFormsView.vue";
 import LoginView from "@/views/LoginView.vue";
+import AdminMediaLibraryView from "@/views/AdminMediaLibraryView.vue";
 import MediaLibraryView from "@/views/MediaLibraryView.vue";
 import KitchenSinkView from "@/views/KitchenSinkView.vue";
 import PageEditorView from "@/views/PageEditorView.vue";
@@ -164,6 +165,7 @@ const router = createRouter({
     },
 
     // ── Administration ──
+    { path: "/admin/administration/media-library", name: "admin-media-library", component: AdminMediaLibraryView, meta: { requiresAuth: true, requiresAdmin: true, title: "Media Library" } },
     { path: "/admin/settings", name: "settings", component: SettingsView, meta: { requiresAuth: true, title: "Settings" } },
     { path: "/admin/settings/system", name: "settings-system", component: SystemInfoView, meta: { requiresAuth: true, title: "System Info" } },
 

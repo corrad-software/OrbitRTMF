@@ -445,6 +445,20 @@ export type MediaMetadataInput = {
   description: string;
 };
 
+export type AllAttachment = {
+  id: string;
+  source: 'media' | 'frontend_attachment' | 'module_photo' | 'submodule_photo' | 'scenario_attachment';
+  sourceLabel: string;
+  context?: string | null;
+  filename: string;
+  originalName: string;
+  label?: string | null;
+  mimeType: string;
+  size: number;
+  url: string;
+  createdAt: string;
+};
+
 export type SettingsPayload = {
   siteTitle: string;
   tagline: string;
