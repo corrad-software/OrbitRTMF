@@ -10,7 +10,7 @@ const activeTab = ref<"run" | "queue" | "manual">("run");
 
 const raw       = ref("");
 const loading   = ref(false);
-const result    = ref<RtmfImportResult | null>(null);
+const results   = ref<RtmfImportResult[]>([]);
 const error     = ref<string | null>(null);
 const jsonError = ref<string | null>(null);
 
@@ -27,7 +27,7 @@ function validateJson() {
 async function runImport() {
   jsonError.value = null;
   error.value = null;
-  result.value = null;
+  results.value = [];
 
   let payload: unknown;
   try {
@@ -40,7 +40,7 @@ async function runImport() {
   loading.value = true;
   try {
     const res = await importRtmfCatalog(payload);
-    result.value = res.data;
+    results.value = res.data;
   } catch (e) {
     error.value = (e as Error).message ?? "Import failed.";
   } finally {
@@ -174,7 +174,7 @@ const EXAMPLE = JSON.stringify({
               <button
                 v-if="raw"
                 class="text-sm text-slate-400 hover:text-slate-600"
-                @click="raw = ''; result = null; error = null; jsonError = null"
+                @click="raw = ''; results = []; error = null; jsonError = null"
               >Clear</button>
             </div>
           </div>
@@ -190,7 +190,11 @@ const EXAMPLE = JSON.stringify({
         </div>
 
         <!-- Result -->
-        <article v-if="result" class="rounded-lg border border-emerald-200 bg-emerald-50 shadow-sm">
+        <article
+          v-for="(result, idx) in results"
+          :key="`${result.module}-${result.subModule}-${idx}`"
+          class="rounded-lg border border-emerald-200 bg-emerald-50 shadow-sm"
+        >
           <div class="flex items-center gap-2 border-b border-emerald-200 px-4 py-2.5">
             <CheckCircle2 class="h-4 w-4 text-emerald-600" />
             <h2 class="text-sm font-semibold text-emerald-800">Import successful</h2>

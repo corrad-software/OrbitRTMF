@@ -48,6 +48,8 @@ return [
 
         'mysql_external' => [
             'driver'    => 'mysql',
+            // Coolify / .env: EXTERNAL_DATABASE_URL or EXTERNAL_DB_URL (mysql://user:pass@host:port/db)
+            'url'       => env('EXTERNAL_DATABASE_URL') ?: env('EXTERNAL_DB_URL'),
             'host'      => env('EXTERNAL_DB_HOST', '43.217.187.42'),
             'port'      => env('EXTERNAL_DB_PORT', '4151'),
             'database'  => env('EXTERNAL_DB_DATABASE', 'testagent'),
@@ -61,11 +63,13 @@ return [
 
         'mantis' => [
             'driver'    => 'mysql',
+            // Coolify / .env: MANTIS_DATABASE_URL or MANTIS_DB_URL (mysql://user:pass@host:port/db)
+            'url'       => env('MANTIS_DATABASE_URL') ?: env('MANTIS_DB_URL'),
             'host'      => env('MANTIS_DB_HOST', '43.216.185.12'),
             'port'      => env('MANTIS_DB_PORT', '3306'),
             'database'  => env('MANTIS_DB_DATABASE', 'mantisbt_db'),
             'username'  => env('MANTIS_DB_USERNAME', 'mantisbt_user'),
-            'password'  => env('MANTIS_DB_PASSWORD', 'XS@mantisbt2025'),
+            'password'  => env('MANTIS_DB_PASSWORD', ''),
             'charset'   => 'utf8mb4',
             'collation' => 'utf8mb4_unicode_ci',
             'prefix'    => '',
