@@ -41,9 +41,10 @@ async function load() {
   loadAbort = new AbortController();
   loading.value = true;
   const params = new URLSearchParams({
+    page_num: String(requestedPage),
     page: String(requestedPage),
     limit: String(limit.value),
-    _cb: String(seq),
+    _cb: `${seq}-${Date.now()}`,
   });
   if (q.value) params.set("q", q.value);
   if (moduleFilter.value) params.set("module_id", String(moduleFilter.value));
@@ -54,11 +55,13 @@ async function load() {
     const response = await listRtmfFrontends(`?${params.toString()}`, {
       signal: loadAbort.signal,
       cache: "no-store",
+      headers: {
+        "X-Page-Num": String(requestedPage),
+        "X-Limit": String(limit.value),
+      },
     });
     if (seq !== loadSeq || requestedPage !== page.value) return;
-    const responsePage = response.meta?.page as number | undefined;
-    if (responsePage !== undefined && responsePage !== requestedPage) return;
-    rows.value = response.data;
+    rows.value = [...response.data];
     total.value = (response.meta?.total as number) ?? response.data.length;
     totalPages.value = (response.meta?.totalPages as number) ?? (Math.ceil(total.value / limit.value) || 1);
   } catch (e) {

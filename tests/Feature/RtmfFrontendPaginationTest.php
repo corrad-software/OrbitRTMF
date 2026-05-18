@@ -59,7 +59,10 @@ class RtmfFrontendPaginationTest extends TestCase
             ->assertJsonPath('meta.page', 1)
             ->assertJsonPath('meta.total', 30);
 
-        $page2 = $this->getJson('/api/rtmf-frontends?page=2&limit=10&sort_by=spec_id&sort_dir=asc');
+        $page2 = $this->getJson('/api/rtmf-frontends?page_num=2&limit=10&sort_by=spec_id&sort_dir=asc', [
+            'X-Page-Num' => '2',
+            'X-Limit' => '10',
+        ]);
         $page2->assertOk()
             ->assertJsonPath('meta.page', 2);
 
