@@ -146,7 +146,16 @@ export const DEFAULT_MENU: MenuGroupDef[] = [
       { id: "rtmf-frontends", label: "Pages", to: "/admin/rtmf/frontends", icon: AppWindow },
       { id: "rtmf-modules", label: "Module", to: "/admin/rtmf/modules", icon: Layers },
       { id: "rtmf-actors", label: "Actor", to: "/admin/rtmf/actors", icon: Users },
-      { id: "rtmf-scenarios", label: "Flow Scenarios", to: "/admin/rtmf/scenarios", icon: GitBranch },
+      {
+        id: "rtmf-flow-scenarios",
+        label: "Flow Scenarios",
+        to: "/admin/rtmf/scenarios",
+        icon: GitBranch,
+        children: [
+          { id: "rtmf-scenarios", label: "Custom Flow",    to: "/admin/rtmf/scenarios" },
+          { id: "rtmf-relations", label: "Page Relations", to: "/admin/rtmf/relations" },
+        ],
+      },
     ],
   },
   {

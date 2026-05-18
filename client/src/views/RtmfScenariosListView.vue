@@ -59,9 +59,9 @@ onMounted(load);
           <nav class="mb-1 flex items-center gap-1.5 text-xs font-medium text-slate-500">
             <RouterLink to="/admin/rtmf/frontends" class="transition-colors hover:text-violet-600">Page Catalog</RouterLink>
             <span class="text-slate-300">/</span>
-            <span class="text-slate-700">Flow Scenarios</span>
+            <span class="text-slate-700">Custom Flow</span>
           </nav>
-          <h1 class="page-title">Flow Scenarios</h1>
+          <h1 class="page-title">Custom Flow</h1>
           <p class="mt-1 text-sm text-slate-500">Build and visualize page flow scenarios.</p>
         </div>
         <button

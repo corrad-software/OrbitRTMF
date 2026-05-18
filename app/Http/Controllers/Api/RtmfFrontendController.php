@@ -212,6 +212,65 @@ class RtmfFrontendController extends Controller
         return $this->sendOk($result);
     }
 
+    public function allRelations(Request $request): JsonResponse
+    {
+        $projectId   = $request->integer('project_id') ?: null;
+        $moduleIds   = $projectId
+            ? RtmfModule::where('project_id', $projectId)->pluck('id')
+            : null;
+        $frontendIds = $moduleIds !== null
+            ? RtmfFrontend::whereIn('module_id', $moduleIds)->pluck('id')
+            : RtmfFrontend::pluck('id');
+
+        $items = RtmfFrontendItem::whereIn('rtmf_frontend_id', $frontendIds)
+            ->whereNotNull('condition')
+            ->where('condition', '!=', '')
+            ->where('condition', '!=', '[]')
+            ->select('id', 'rtmf_frontend_id', 'type', 'label', 'condition')
+            ->with('frontend:id,spec_id,title')
+            ->get();
+
+        // Decode condition JSON once per item, then collect target IDs
+        $decoded    = [];
+        $targetIds  = [];
+        foreach ($items as $item) {
+            $pairs = json_decode($item->condition, true) ?? [];
+            $decoded[$item->id] = $pairs;
+            foreach ($pairs as $pair) {
+                if (isset($pair['p']) && $pair['p'] > 0) {
+                    $targetIds[] = (int) $pair['p'];
+                }
+            }
+        }
+
+        $pageLookup = RtmfFrontend::whereIn('id', array_unique($targetIds))
+            ->select('id', 'spec_id', 'title')
+            ->get()->keyBy('id');
+
+        $edges = [];
+        foreach ($items as $item) {
+            foreach ($decoded[$item->id] as $pair) {
+                if (!isset($pair['p']) || $pair['p'] <= 0) continue;
+                $toPage = $pageLookup->get((int) $pair['p']);
+                if (!$toPage) continue;
+                $edges[] = [
+                    'itemId'    => $item->id,
+                    'itemType'  => $item->type,
+                    'itemLabel' => $item->label,
+                    'condition' => $pair['c'] ?? null,
+                    'fromId'    => $item->rtmf_frontend_id,
+                    'fromSpecId'=> $item->frontend?->spec_id,
+                    'fromTitle' => $item->frontend?->title,
+                    'toId'      => (int) $pair['p'],
+                    'toSpecId'  => $toPage->spec_id,
+                    'toTitle'   => $toPage->title,
+                ];
+            }
+        }
+
+        return $this->sendOk($edges);
+    }
+
     public function source(int $id): JsonResponse
     {
         $row = RtmfFrontend::find($id);

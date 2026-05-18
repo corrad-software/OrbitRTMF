@@ -100,6 +100,7 @@ Route::middleware('auth:sanctum')->group(function () {
         // Frontends
         Route::get('/rtmf-frontends/export/csv', [RtmfFrontendController::class, 'export']);
         Route::post('/rtmf-frontends/import', [RtmfFrontendController::class, 'import']);
+        Route::get('/rtmf-frontends/relations', [RtmfFrontendController::class, 'allRelations']);
         Route::apiResource('rtmf-frontends', RtmfFrontendController::class)->only(['index', 'show', 'store', 'update', 'destroy']);
         Route::post('/rtmf-frontends/{id}/duplicate', [RtmfFrontendController::class, 'duplicate']);
         Route::get('/rtmf-frontends/{id}/incoming-links', [RtmfFrontendController::class, 'incomingLinks']);

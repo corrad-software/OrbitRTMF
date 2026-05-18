@@ -394,8 +394,8 @@ onMounted(load);
               <h2 class="text-sm font-semibold text-slate-900">BA Feedback Trend — Last 14 Days</h2>
               <div class="ml-auto flex items-center gap-3 text-[11px] text-slate-500">
                 <span class="flex items-center gap-1"><span class="inline-block h-2.5 w-2.5 rounded-sm bg-slate-300"></span>Open</span>
-                <span class="flex items-center gap-1"><span class="inline-block h-2.5 w-2.5 rounded-sm bg-amber-400"></span>Reviewed</span>
-                <span class="flex items-center gap-1"><span class="inline-block h-2.5 w-2.5 rounded-sm bg-emerald-500"></span>Approved</span>
+                <span class="flex items-center gap-1"><span class="inline-block h-2.5 w-2.5 rounded-sm bg-amber-400"></span>In Progress</span>
+                <span class="flex items-center gap-1"><span class="inline-block h-2.5 w-2.5 rounded-sm bg-emerald-500"></span>Closed</span>
               </div>
             </div>
             <div class="p-4 pb-8">
@@ -427,8 +427,8 @@ onMounted(load);
                   <!-- Tooltip -->
                   <div class="pointer-events-none absolute bottom-full z-10 mb-1 hidden w-24 rounded-lg border border-slate-200 bg-white p-2 text-[10px] shadow-lg group-hover:block">
                     <p class="mb-1 font-medium text-slate-600">{{ day.date }}</p>
-                    <p class="text-emerald-600">Approved: {{ day.approved }}</p>
-                    <p class="text-amber-600">Reviewed: {{ day.reviewed }}</p>
+                    <p class="text-emerald-600">Closed: {{ day.approved }}</p>
+                    <p class="text-amber-600">In Progress: {{ day.reviewed }}</p>
                     <p class="text-slate-400">Open: {{ day.open }}</p>
                   </div>
                 </div>
@@ -475,8 +475,8 @@ onMounted(load);
               <div class="flex flex-wrap items-center gap-1.5 px-4 py-2.5">
                 <span class="text-[10px] font-medium text-slate-400">BA Review:</span>
                 <span class="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-semibold text-slate-500">{{ a.baFeedback.open }} Open</span>
-                <span class="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-600">{{ a.baFeedback.reviewed }} Reviewed</span>
-                <span class="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-600">{{ a.baFeedback.approved }} Approved</span>
+                <span class="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-600">{{ a.baFeedback.reviewed }} In Progress</span>
+                <span class="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-600">{{ a.baFeedback.approved }} Closed</span>
               </div>
 
               <!-- Module breakdown toggle -->
