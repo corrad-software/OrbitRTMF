@@ -1,15 +1,17 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from "vue";
 import { RouterLink, useRoute, useRouter } from "vue-router";
-import { Cable, Paperclip, Trash2, LayoutGrid, Save, Upload, X, Plus, TableProperties, ExternalLink, Search, GripVertical, Layout, UserCheck, MessageSquare, CheckCircle2, Share2 } from "lucide-vue-next";
+import { Cable, Paperclip, Trash2, LayoutGrid, Save, Upload, X, Plus, TableProperties, ExternalLink, Search, GripVertical, Layout, UserCheck, MessageSquare, CheckCircle2, Share2, Image } from "lucide-vue-next";
 
 import AdminLayout from "@/layouts/AdminLayout.vue";
 import MarkdownEditor from "@/components/MarkdownEditor.vue";
+import MediaPickerModal from "@/components/MediaPickerModal.vue";
 import {
   createRtmfFrontend,
   deleteRtmfFrontend,
   listRtmfFrontends,
   deleteRtmfAttachment,
+  linkRtmfAttachment,
   getRtmfFrontend,
   listRtmfActors,
   listRtmfAttachments,
@@ -698,6 +700,40 @@ async function removeMockup() {
   attachments.value = attachments.value.filter((a) => a.id !== mockupAttachment.value!.id);
 }
 
+const showLibraryPicker = ref(false);
+
+async function pickFromLibrary(item: import("@/types").AllAttachment) {
+  showLibraryPicker.value = false;
+  if (!isEdit.value) return;
+  mockupUploading.value = true;
+  try {
+    if (mockupAttachment.value) {
+      await deleteRtmfAttachment(id.value, mockupAttachment.value.id);
+      attachments.value = attachments.value.filter((a) => a.id !== mockupAttachment.value!.id);
+    }
+    const res = await linkRtmfAttachment(id.value, {
+      url: item.url,
+      originalName: item.originalName,
+      mimeType: item.mimeType,
+      size: item.size,
+      label: "__mockup__",
+    });
+    attachments.value.push(res.data);
+    toast.success("Mockup set from library");
+  } catch (e) {
+    toast.error("Failed", e instanceof Error ? e.message : "Could not set mockup from library.");
+  } finally {
+    mockupUploading.value = false;
+  }
+}
+
+async function uploadFromPicker(file: File) {
+  showLibraryPicker.value = false;
+  if (!isEdit.value) return;
+  mockupFile.value = file;
+  await handleMockupUpload();
+}
+
 // ── Scenario Groups & Rows ──
 const scenarioGroups = ref<RtmfFrontendScenarioGroup[]>([]);
 
@@ -1158,62 +1194,37 @@ onMounted(async () => {
           <div class="flex items-center gap-2 border-b border-slate-100 px-4 py-3">
             <Layout class="h-4 w-4 text-violet-600" />
             <h2 class="text-sm font-semibold text-slate-900">Mockup Image</h2>
-            <div v-if="mockupAttachment && projectStore.canEdit" class="ml-auto flex gap-2">
-              <label class="flex cursor-pointer items-center gap-1.5 rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 shadow-sm transition-colors hover:bg-slate-50">
-                <Upload class="h-4 w-4" />
-                Replace
-                <input type="file" accept="image/*" class="hidden" @change="onMockupFileChange" />
-              </label>
-              <button @click="removeMockup" class="flex items-center gap-1.5 rounded-lg border border-rose-200 px-3 py-1.5 text-sm font-medium text-rose-600 shadow-sm transition-colors hover:bg-rose-50">
-                <Trash2 class="h-4 w-4" />
-                Remove
+          </div>
+
+          <!-- Image exists -->
+          <div v-if="mockupAttachment">
+            <div class="p-4">
+              <img :src="mockupAttachment.url" alt="Mockup" class="w-full rounded-lg border border-slate-100 object-contain shadow-sm" />
+            </div>
+            <div v-if="projectStore.canEdit" class="flex items-center gap-2 border-t border-slate-100 px-4 py-3">
+              <button
+                @click="showLibraryPicker = true"
+                :disabled="mockupUploading"
+                class="rounded bg-slate-700 px-4 py-1.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-slate-800 disabled:opacity-50"
+              >
+                {{ mockupUploading ? 'Saving…' : 'Change Mockup Image' }}
               </button>
+              <button @click="removeMockup" class="text-sm text-slate-400 hover:text-rose-500 transition-colors">Remove</button>
             </div>
           </div>
 
-          <!-- Image display -->
-          <div v-if="mockupAttachment" class="p-4">
-            <img :src="mockupAttachment.url" alt="Mockup" class="w-full rounded-lg border border-slate-100 object-contain shadow-sm" />
-          </div>
-
-          <!-- Upload area (no image yet or after remove) -->
-          <div v-else class="p-6">
-            <label
-              class="flex w-full cursor-pointer flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-slate-200 bg-slate-50 py-12 transition-colors hover:border-violet-300 hover:bg-violet-50"
-              :class="{ 'border-violet-400 bg-violet-50': mockupFile }"
+          <!-- No image -->
+          <div v-else class="flex flex-col items-center justify-center gap-3 py-14">
+            <Image class="h-14 w-14 text-slate-200" />
+            <p class="text-sm text-slate-400">No mockup image set.</p>
+            <button
+              v-if="projectStore.canEdit"
+              @click="showLibraryPicker = true"
+              :disabled="mockupUploading"
+              class="mt-1 rounded bg-slate-700 px-5 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-slate-800 disabled:opacity-50"
             >
-              <Upload class="h-8 w-8 text-slate-300" />
-              <div class="text-center">
-                <p class="text-sm font-medium text-slate-600">{{ mockupFile ? mockupFile.name : 'Click to upload mockup image' }}</p>
-                <p class="mt-1 text-xs text-slate-400">PNG, JPG, GIF, WebP</p>
-              </div>
-              <input id="mockup-file-input" type="file" accept="image/*" class="hidden" @change="onMockupFileChange" />
-            </label>
-            <div v-if="mockupFile && projectStore.canEdit" class="mt-3 flex justify-end">
-              <button
-                @click="handleMockupUpload"
-                :disabled="mockupUploading"
-                class="flex items-center gap-2 rounded-lg bg-violet-600 px-5 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-violet-700 disabled:opacity-50"
-              >
-                <Upload class="h-4 w-4" />
-                {{ mockupUploading ? 'Uploading…' : 'Upload' }}
-              </button>
-            </div>
-          </div>
-
-          <!-- Replace trigger upload handler (hidden file input result) -->
-          <div v-if="mockupFile && mockupAttachment && projectStore.canEdit" class="border-t border-slate-100 px-4 py-3">
-            <div class="flex items-center justify-between gap-3">
-              <span class="truncate text-sm text-slate-600">{{ mockupFile.name }}</span>
-              <button
-                @click="handleMockupUpload"
-                :disabled="mockupUploading"
-                class="shrink-0 flex items-center gap-2 rounded-lg bg-violet-600 px-5 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-violet-700 disabled:opacity-50"
-              >
-                <Upload class="h-4 w-4" />
-                {{ mockupUploading ? 'Uploading…' : 'Upload' }}
-              </button>
-            </div>
+              {{ mockupUploading ? 'Saving…' : 'Set Mockup Image' }}
+            </button>
           </div>
         </article>
 
@@ -1836,5 +1847,12 @@ onMounted(async () => {
       <div v-if="pagesForLine(condDropdown.itemId, condDropdown.li).length === 0" class="px-2.5 py-2 text-xs text-slate-400">No results</div>
     </div>
   </Teleport>
+
+  <MediaPickerModal
+    v-if="showLibraryPicker"
+    @upload="uploadFromPicker"
+    @select="pickFromLibrary"
+    @close="showLibraryPicker = false"
+  />
 
 </template>
