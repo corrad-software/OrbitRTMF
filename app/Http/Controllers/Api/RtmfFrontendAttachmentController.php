@@ -77,6 +77,35 @@ class RtmfFrontendAttachmentController extends Controller
         return $this->sendOk($attachment);
     }
 
+    public function link(Request $request, int $frontendId): JsonResponse
+    {
+        $frontend = RtmfFrontend::find($frontendId);
+        if (! $frontend) {
+            return $this->sendError(404, 'NOT_FOUND', 'Frontend entry not found');
+        }
+
+        $request->validate([
+            'url'           => 'required|string|max:2048',
+            'original_name' => 'required|string|max:255',
+            'mime_type'     => 'required|string|max:128',
+            'size'          => 'required|integer|min:0',
+            'label'         => 'nullable|string|max:255',
+        ]);
+
+        $attachment = RtmfFrontendAttachment::create([
+            'rtmf_frontend_id' => $frontendId,
+            'label'            => $request->input('label') ?: null,
+            'filename'         => '',
+            'original_name'    => $request->input('original_name'),
+            'mime_type'        => $request->input('mime_type'),
+            'size'             => $request->input('size'),
+            'path'             => '',
+            'url'              => $request->input('url'),
+        ]);
+
+        return $this->sendOk($attachment);
+    }
+
     public function destroy(int $frontendId, int $id): JsonResponse
     {
         $attachment = RtmfFrontendAttachment::where('rtmf_frontend_id', $frontendId)->find($id);
@@ -84,7 +113,9 @@ class RtmfFrontendAttachmentController extends Controller
             return $this->sendError(404, 'NOT_FOUND', 'Attachment not found');
         }
 
-        Storage::disk('public')->delete('rtmf-attachments/' . $attachment->filename);
+        if ($attachment->filename) {
+            Storage::disk('public')->delete('rtmf-attachments/' . $attachment->filename);
+        }
         $attachment->delete();
 
         return $this->sendOk(['success' => true]);

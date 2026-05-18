@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Traits\ApiResponse;
+use App\Services\SettingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -11,17 +12,12 @@ class ChangelogController extends Controller
 {
     use ApiResponse;
 
-    private function path(): string
-    {
-        return base_path('docs/CHANGELOG.md');
-    }
+    public function __construct(protected SettingService $settings) {}
 
     public function show(): JsonResponse
     {
-        $path = $this->path();
-
         return $this->sendOk([
-            'content' => file_exists($path) ? file_get_contents($path) : '',
+            'content' => $this->settings->get('changelog', ''),
         ]);
     }
 
@@ -31,11 +27,7 @@ class ChangelogController extends Controller
             'content' => 'required|string|min:1',
         ]);
 
-        $path = $this->path();
-        if (! is_dir(dirname($path))) {
-            mkdir(dirname($path), 0755, true);
-        }
-        file_put_contents($path, $request->input('content'));
+        $this->settings->set('changelog', $request->input('content'));
 
         return $this->sendOk(['success' => true]);
     }

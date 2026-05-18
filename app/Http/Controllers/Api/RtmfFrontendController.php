@@ -104,6 +104,56 @@ class RtmfFrontendController extends Controller
         return $this->sendOk($row);
     }
 
+    public function duplicate(Request $request, int $id): JsonResponse
+    {
+        $source = RtmfFrontend::with(['actors', 'scenarioGroups.rows'])->find($id);
+        if (! $source) {
+            return $this->sendError(404, 'NOT_FOUND', 'RTMF frontend not found');
+        }
+
+        $module = RtmfModule::find($source->module_id);
+        if ($deny = $this->denyIfCannotEdit($request, $module?->project_id)) return $deny;
+
+        $copy = RtmfFrontend::create([
+            'spec_id'                 => $source->spec_id . '_COPY',
+            'module_id'               => $source->module_id,
+            'sub_module_id'           => $source->sub_module_id,
+            'tab_code'                => $source->tab_code,
+            'vue_path'                => $source->vue_path,
+            'url_dev'                 => $source->url_dev,
+            'url_stg'                 => $source->url_stg,
+            'url_prd'                 => $source->url_prd,
+            'title'                   => $source->title . ' (1)',
+            'business_requirement'    => $source->business_requirement,
+            'stakeholder_requirement' => $source->stakeholder_requirement,
+            'description'             => $source->description,
+            'is_done'                 => false,
+            'assignees'               => $source->assignees,
+        ]);
+
+        $copy->actors()->sync($source->actors->pluck('id'));
+
+        foreach ($source->scenarioGroups as $group) {
+            $newGroup = $copy->scenarioGroups()->create([
+                'title'       => $group->title,
+                'description' => $group->description,
+                'sort_order'  => $group->sort_order,
+            ]);
+            foreach ($group->rows as $row) {
+                $newGroup->rows()->create([
+                    'step'       => $row->step,
+                    'fasa'       => $row->fasa,
+                    'role'       => $row->role,
+                    'aktiviti'   => $row->aktiviti,
+                    'sort_order' => $row->sort_order,
+                ]);
+            }
+        }
+
+        $copy->load(['module', 'subModule', 'actors']);
+        return $this->sendCreated($copy);
+    }
+
     public function show(int $id): JsonResponse
     {
         $row = RtmfFrontend::with(['module', 'subModule', 'actors'])->find($id);

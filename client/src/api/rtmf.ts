@@ -5,6 +5,7 @@ import type {
   RtmfAttachment,
   RtmfScenarioAttachment,
   RtmfDashboardSummary,
+  RtmfByAssigneeSummary,
   RtmfFrontend,
   RtmfFrontendInput,
   RtmfFrontendItem,
@@ -47,6 +48,10 @@ export async function fetchRtmfDashboard(params = "") {
   return apiRequest<{ data: RtmfDashboardSummary }>(`/api/rtmf/dashboard${params}`);
 }
 
+export async function fetchRtmfByAssignee(params = "") {
+  return apiRequest<{ data: RtmfByAssigneeSummary }>(`/api/rtmf/dashboard/by-assignee${params}`);
+}
+
 // ── Frontends ──
 export async function listRtmfFrontends(params = "", init: RequestInit = {}) {
   return apiRequest<{ data: RtmfFrontend[]; meta: Record<string, unknown> }>(
@@ -80,6 +85,12 @@ export async function updateRtmfFrontend(id: number, input: Partial<RtmfFrontend
 export async function deleteRtmfFrontend(id: number) {
   return apiRequest<{ data: { success: boolean } }>(`/api/rtmf-frontends/${id}`, {
     method: "DELETE",
+  });
+}
+
+export async function duplicateRtmfFrontend(id: number) {
+  return apiRequest<{ data: RtmfFrontend }>(`/api/rtmf-frontends/${id}/duplicate`, {
+    method: "POST",
   });
 }
 
@@ -239,6 +250,9 @@ export async function uploadRtmfAttachment(frontendId: number, file: File, label
   form.append("file", file);
   if (label) form.append("label", label);
   return apiRequest<{ data: RtmfAttachment }>(`/api/rtmf-frontends/${frontendId}/attachments`, { method: "POST", body: form });
+}
+export async function linkRtmfAttachment(frontendId: number, payload: { url: string; originalName: string; mimeType: string; size: number; label: string }) {
+  return apiRequest<{ data: RtmfAttachment }>(`/api/rtmf-frontends/${frontendId}/attachments/link`, { method: "POST", body: JSON.stringify(payload) });
 }
 export async function updateRtmfAttachmentLabel(frontendId: number, attachmentId: number, label: string) {
   return apiRequest<{ data: RtmfAttachment }>(`/api/rtmf-frontends/${frontendId}/attachments/${attachmentId}`, { method: "PATCH", body: JSON.stringify({ label }) });

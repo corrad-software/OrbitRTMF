@@ -196,4 +196,118 @@ class RtmfDashboardController extends Controller
             'byRoleModule'  => $byRoleModule,
         ]);
     }
+
+    public function byAssignee(Request $request): JsonResponse
+    {
+        $projectId = $request->integer('project_id') ?: null;
+
+        $moduleIds   = $projectId
+            ? RtmfModule::where('project_id', $projectId)->pluck('id')
+            : null;
+
+        $frontendIds = $moduleIds !== null
+            ? RtmfFrontend::whereIn('module_id', $moduleIds)->pluck('id')
+            : RtmfFrontend::pluck('id');
+
+        // ── 1. Per-assignee breakdown (PHP-side JSON expansion) ──────────────
+        $frontends = DB::table('rtmf_frontends')
+            ->select('id', 'module_id', 'is_done', 'assignees')
+            ->whereIn('id', $frontendIds)
+            ->whereNotNull('assignees')
+            ->get();
+
+        $moduleLookup = DB::table('rtmf_modules')
+            ->select('id', 'code', 'name')
+            ->get()->keyBy('id');
+
+        $assigneeMap  = [];
+        $feAssigneeKeys = []; // frontend_id => [key, ...]
+
+        foreach ($frontends as $fe) {
+            $list = json_decode($fe->assignees, true) ?? [];
+            foreach ($list as $a) {
+                $key = ($a['source'] ?? 'x') . ':' . ($a['id'] ?? $a['name']);
+                $feAssigneeKeys[$fe->id][] = $key;
+
+                if (!isset($assigneeMap[$key])) {
+                    $assigneeMap[$key] = [
+                        'key'       => $key,
+                        'name'      => $a['name'],
+                        'email'     => $a['email'] ?? null,
+                        'photoUrl'  => $a['photoUrl'] ?? null,
+                        'total'     => 0,
+                        'done'      => 0,
+                        'byModule'  => [],
+                        'baFeedback' => ['open' => 0, 'reviewed' => 0, 'approved' => 0],
+                    ];
+                }
+
+                $assigneeMap[$key]['total']++;
+                if ($fe->is_done) $assigneeMap[$key]['done']++;
+
+                $mid = $fe->module_id;
+                if (!isset($assigneeMap[$key]['byModule'][$mid])) {
+                    $mod = $moduleLookup[$mid] ?? null;
+                    $assigneeMap[$key]['byModule'][$mid] = [
+                        'moduleId' => $mid,
+                        'code'     => $mod?->code ?? '?',
+                        'name'     => $mod?->name ?? '?',
+                        'total'    => 0,
+                        'done'     => 0,
+                    ];
+                }
+                $assigneeMap[$key]['byModule'][$mid]['total']++;
+                if ($fe->is_done) $assigneeMap[$key]['byModule'][$mid]['done']++;
+            }
+        }
+
+        // ── 2. BA feedback per assignee ──────────────────────────────────────
+        $baFeedbacks = DB::table('rtmf_frontend_feedbacks')
+            ->select('rtmf_frontend_id', 'status')
+            ->where('role', 'business_analyst')
+            ->whereIn('rtmf_frontend_id', $frontendIds)
+            ->get();
+
+        foreach ($baFeedbacks as $fb) {
+            foreach ($feAssigneeKeys[$fb->rtmf_frontend_id] ?? [] as $key) {
+                if (isset($assigneeMap[$key])) {
+                    $assigneeMap[$key]['baFeedback'][$fb->status]++;
+                }
+            }
+        }
+
+        // Flatten and sort by total desc
+        $assignees = array_values(array_map(function ($a) {
+            $a['byModule'] = array_values($a['byModule']);
+            return $a;
+        }, $assigneeMap));
+        usort($assignees, fn ($a, $b) => $b['total'] - $a['total']);
+
+        // ── 3. Daily BA feedback trend (last 14 days) ────────────────────────
+        $since = now()->subDays(13)->startOfDay();
+        $trendRows = DB::table('rtmf_frontend_feedbacks')
+            ->selectRaw("DATE(updated_at) as day, status, COUNT(*) as total")
+            ->where('role', 'business_analyst')
+            ->whereIn('rtmf_frontend_id', $frontendIds)
+            ->where('updated_at', '>=', $since)
+            ->groupByRaw("DATE(updated_at), status")
+            ->orderBy('day')
+            ->get();
+
+        $days = [];
+        for ($i = 13; $i >= 0; $i--) {
+            $d = now()->subDays($i)->format('Y-m-d');
+            $days[$d] = ['date' => $d, 'open' => 0, 'reviewed' => 0, 'approved' => 0];
+        }
+        foreach ($trendRows as $row) {
+            if (isset($days[$row->day])) {
+                $days[$row->day][$row->status] = (int) $row->total;
+            }
+        }
+
+        return $this->sendOk([
+            'assignees'  => $assignees,
+            'dailyTrend' => array_values($days),
+        ]);
+    }
 }

@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from "vue";
 import { RouterLink, useRouter } from "vue-router";
-import { ChevronLeft, ChevronRight, LayoutGrid, Plus, Search } from "lucide-vue-next";
+import { ChevronLeft, ChevronRight, Copy, LayoutGrid, Plus, Search } from "lucide-vue-next";
 
 import AdminLayout from "@/layouts/AdminLayout.vue";
 import { isAbortError } from "@/api/client";
-import { listRtmfFrontends, listRtmfModules } from "@/api/rtmf";
+import { duplicateRtmfFrontend, listRtmfFrontends, listRtmfModules } from "@/api/rtmf";
 import { useRtmfProjectStore } from "@/stores/rtmfProject";
 import { useToast } from "@/composables/useToast";
 import type { RtmfFrontend, RtmfModule } from "@/types";
@@ -21,6 +21,7 @@ const totalPages = ref(1);
 const page = ref(1);
 const limit = ref(25);
 const loading = ref(false);
+const duplicating = ref<number | null>(null);
 const PAGE_SIZES = [10, 25, 50, 100];
 const q = ref("");
 const moduleFilter = ref<number | "">("");
@@ -71,6 +72,19 @@ async function load() {
 function resetAndLoad() {
   page.value = 1;
   load();
+}
+
+async function duplicate(item: RtmfFrontend) {
+  duplicating.value = item.id;
+  try {
+    const res = await duplicateRtmfFrontend(item.id);
+    toast.success("Page duplicated", `"${res.data.title}" created.`);
+    router.push(`/admin/rtmf/frontends/${res.data.id}`);
+  } catch {
+    toast.error("Duplicate failed", "Could not duplicate this page.");
+  } finally {
+    duplicating.value = null;
+  }
 }
 
 function prevPage() {
@@ -189,17 +203,15 @@ onMounted(async () => {
                 <th class="whitespace-nowrap px-3 py-2 text-xs font-semibold uppercase tracking-wider text-slate-500">Module / Sub-module</th>
                 <th class="whitespace-nowrap px-2 py-2 text-center text-xs font-semibold uppercase tracking-wider text-slate-500">Done</th>
                 <th class="whitespace-nowrap px-2 py-2 text-center text-xs font-semibold uppercase tracking-wider text-slate-500">
-                  <span class="flex items-center justify-center gap-1">
-                    <span class="text-violet-500">BA</span>
-                    <span class="text-slate-300">·</span>
-                    <span class="text-sky-500">QA</span>
-                    <span class="text-slate-300">·</span>
-                    <span class="text-amber-500">Tech</span>
-                    <span class="text-slate-300">·</span>
-                    <span class="text-green-600">Dev</span>
-                  </span>
+                  <div class="flex items-center justify-center gap-1.5">
+                    <span class="flex h-4 w-4 items-center justify-center text-violet-500">BA</span>
+                    <span class="flex h-4 w-4 items-center justify-center text-sky-500">QA</span>
+                    <span class="flex h-4 w-4 items-center justify-center text-amber-500">TC</span>
+                    <span class="flex h-4 w-4 items-center justify-center text-green-600">DV</span>
+                  </div>
                 </th>
                 <th class="whitespace-nowrap px-2 py-2 text-center text-xs font-semibold uppercase tracking-wider text-slate-500">Assigned</th>
+                <th class="w-8 px-2 py-2"></th>
               </tr>
             </thead>
             <tbody class="divide-y divide-slate-100">
@@ -234,8 +246,8 @@ onMounted(async () => {
                 </td>
 
                 <!-- Reviews: BA · QA · Tech · Dev -->
-                <td class="px-2 py-2 text-center" @click.stop>
-                  <div class="flex items-center justify-center gap-1">
+                <td class="whitespace-nowrap px-2 py-2 text-center" @click.stop>
+                  <div class="flex items-center justify-center gap-1.5">
                     <span
                       v-for="role in (['business_analyst', 'qa', 'technical', 'developer'] as const)"
                       :key="role"
@@ -288,9 +300,21 @@ onMounted(async () => {
                   </div>
                 </td>
 
+                <!-- Duplicate -->
+                <td class="px-2 py-2 text-center" @click.stop>
+                  <button
+                    v-if="projectStore.canEdit"
+                    @click="duplicate(item)"
+                    :disabled="duplicating === item.id"
+                    class="rounded p-1 text-slate-300 transition-colors hover:bg-violet-50 hover:text-violet-600 disabled:opacity-40"
+                    title="Duplicate page"
+                  >
+                    <Copy class="h-3.5 w-3.5" />
+                  </button>
+                </td>
               </tr>
               <tr v-if="rows.length === 0">
-                <td colspan="7" class="px-4 py-6 text-center text-sm text-slate-400">No frontend entries found.</td>
+                <td colspan="8" class="px-4 py-6 text-center text-sm text-slate-400">No frontend entries found.</td>
               </tr>
             </tbody>
           </table>
