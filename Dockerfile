@@ -57,6 +57,10 @@ RUN composer install --no-dev --no-scripts --no-autoloader --prefer-dist --no-in
 
 COPY . .
 
+# Bundled changelog (other *.md files stay excluded via .dockerignore)
+COPY CHANGELOG.md /var/www/html/CHANGELOG.md
+COPY docs/CHANGELOG.md /var/www/html/docs/CHANGELOG.md
+
 RUN composer install --no-dev --prefer-dist --no-interaction --optimize-autoloader \
     && mkdir -p storage/framework/sessions storage/framework/views storage/framework/cache bootstrap/cache \
     && chown -R www-data:www-data storage bootstrap/cache

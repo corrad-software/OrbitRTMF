@@ -18,8 +18,8 @@ class ChangelogController extends Controller
     {
         $content = trim((string) $this->settings->get('changelog', ''));
 
-        if ($content === '') {
-            $content = $this->readBundledChangelog();
+        if ($content === '' || $content === 'null') {
+            $content = trim($this->readBundledChangelog());
         }
 
         return $this->sendOk([
