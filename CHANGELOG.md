@@ -9,6 +9,27 @@ All notable changes to this project are documented in this file.
 - Redesign topbar with a darker "PowerBar" concept.
 - Build notification module and add topbar notifications dropdown (similar to settings) showing the latest 5 notifications.
 
+## [1.2.7] - 2026-05-18
+
+### Added
+- **Page Relations** page (`/admin/rtmf/relations`) — read-only view of all page-to-page connections auto-generated from Action-type form items in the Page Catalog. Grouped by source page with collapsible rows, module filter dropdown, and instant search across spec IDs, titles, conditions, and item labels.
+- **Diagram tab** on the Page Relations page — SVG node-link graph with left-to-right column layout. Pages are positioned by connection depth; cubic bezier arrows connect source → target. Nodes are clickable (navigate to the page editor). Deduplicates multi-edge pairs into a single arrow. Module filter and search apply to the diagram too.
+- `GET /api/rtmf-frontends/relations` backend endpoint (`allRelations()` in `RtmfFrontendController`) — returns all page edges from non-empty `condition` JSON fields. Supports `?project_id=` scoping. Single-pass JSON decode with `$decoded` cache; uses `isset($pair['p']) && $pair['p'] > 0` guard. Registered before the `apiResource` line to prevent route capture conflict.
+- `RtmfRelationEdge` TypeScript type and `fetchRtmfRelations()` API function added.
+
+### Changed
+- **Flow Scenarios** menu item restructured as a parent with two children: **Custom Flow** (`/admin/rtmf/scenarios`) and **Page Relations** (`/admin/rtmf/relations`), under the Page Catalog group.
+- Scenarios list page title and breadcrumb renamed from "Flow Scenarios" to **Custom Flow**.
+- Page Relations breadcrumb: `Page Catalog → Flow Scenarios → Page Relations`.
+- Module filter in Page Relations uses exact first-segment match (`specId.split("-")[0] === filter`) instead of `startsWith` to avoid false matches (e.g. "PRF" matching "PRFE-01").
+- Collapsed group state in Page Relations resets on every data reload (project switch or manual refresh).
+
+## [1.2.6] - 2026-05-18
+
+### Fixed
+- **Catalog Tracking — Individual tab**: Assignee with mixed `source` values in the `assignees` JSON (e.g. some frontends storing `source: 'local'`, others omitting it) produced two separate cards for the same person with split counts. Key now uses `id` only (ignoring `source`), collapsing duplicates into a single card.
+- **Catalog Tracking — Individual tab**: BA Review status pills and trend chart legend/tooltips showed "Reviewed / Approved" instead of the correct "In Progress / Closed" labels (DB values `reviewed` / `approved` unchanged).
+
 ## [1.2.5] - 2026-05-17
 
 ### Added

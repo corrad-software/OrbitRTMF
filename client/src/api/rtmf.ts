@@ -12,6 +12,7 @@ import type {
   RtmfFrontendItemInput,
   RtmfFrontendApiEndpoint,
   RtmfFrontendApiEndpointInput,
+  RtmfRelationEdge,
   RtmfFrontendFeedback,
   RtmfFrontendFeedbackRole,
   RtmfFrontendFeedbackStatus,
@@ -534,4 +535,8 @@ export async function importRtmfCatalog(payload: unknown) {
     method: "POST",
     body: JSON.stringify(payload),
   });
+}
+
+export async function fetchRtmfRelations(params = "") {
+  return apiRequest<{ data: RtmfRelationEdge[] }>(`/api/rtmf-frontends/relations${params}`);
 }

@@ -606,3 +606,16 @@ export type RtmfFrontendApiEndpointInput = {
   description?: string | null;
   sortOrder?: number;
 };
+
+export type RtmfRelationEdge = {
+  itemId: number;
+  itemType: string | null;
+  itemLabel: string | null;
+  condition: string | null;
+  fromId: number;
+  fromSpecId: string;
+  fromTitle: string;
+  toId: number;
+  toSpecId: string;
+  toTitle: string;
+};
