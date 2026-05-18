@@ -196,7 +196,14 @@ export type RtmfAssigneeStat = {
   photoUrl?: string | null;
   total: number;
   done: number;
-  byModule: { moduleId: number; code: string; name: string; total: number; done: number }[];
+  byModule: {
+    moduleId: number;
+    code: string;
+    name: string;
+    total: number;
+    done: number;
+    baFeedback: { open: number; reviewed: number; approved: number };
+  }[];
   baFeedback: { open: number; reviewed: number; approved: number };
 };
 

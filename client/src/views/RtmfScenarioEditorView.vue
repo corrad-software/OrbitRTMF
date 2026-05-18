@@ -103,6 +103,10 @@ function closePageDropdown() {
   pageDropdown.value = null;
 }
 
+function scheduleClosePageDropdown() {
+  window.setTimeout(closePageDropdown, 150);
+}
+
 // ── Actors ──
 const allActors = ref<RtmfActor[]>([]);
 const actorPickerOpen = ref<number | null>(null); // stepId
@@ -705,7 +709,7 @@ onMounted(async () => {
                         placeholder="Search page…"
                         @input="openPageDropdown($event, step.id)"
                         @focus="openPageDropdown($event, step.id)"
-                        @blur="setTimeout(closePageDropdown, 150)"
+                        @blur="scheduleClosePageDropdown"
                       />
                     </div>
                   </div>
