@@ -189,6 +189,29 @@ export type RtmfDashboardSummary = {
   };
 };
 
+export type RtmfAssigneeStat = {
+  key: string;
+  name: string;
+  email?: string | null;
+  photoUrl?: string | null;
+  total: number;
+  done: number;
+  byModule: { moduleId: number; code: string; name: string; total: number; done: number }[];
+  baFeedback: { open: number; reviewed: number; approved: number };
+};
+
+export type RtmfDailyTrend = {
+  date: string;
+  open: number;
+  reviewed: number;
+  approved: number;
+};
+
+export type RtmfByAssigneeSummary = {
+  assignees: RtmfAssigneeStat[];
+  dailyTrend: RtmfDailyTrend[];
+};
+
 export type RtmfFrontendLink = {
   id: number;
   specId: string;

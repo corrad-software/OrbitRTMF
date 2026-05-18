@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Models\RtmfFrontendScenarioGroup;
 
 class RtmfFrontend extends Model
 {
@@ -60,6 +61,11 @@ class RtmfFrontend extends Model
     public function items(): HasMany
     {
         return $this->hasMany(RtmfFrontendItem::class, 'rtmf_frontend_id')->orderBy('sort_order')->orderBy('id');
+    }
+
+    public function scenarioGroups(): HasMany
+    {
+        return $this->hasMany(RtmfFrontendScenarioGroup::class, 'rtmf_frontend_id')->orderBy('sort_order');
     }
 
     public function feedbacks(): HasMany

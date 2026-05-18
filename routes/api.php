@@ -95,14 +95,17 @@ Route::middleware('auth:sanctum')->group(function () {
     // Project-level authorization is handled by denyIfCannotEdit in each controller.
     Route::middleware('permission:rtmf.view')->group(function () {
         Route::get('/rtmf/dashboard', [RtmfDashboardController::class, 'summary']);
+        Route::get('/rtmf/dashboard/by-assignee', [RtmfDashboardController::class, 'byAssignee']);
 
         // Frontends
         Route::get('/rtmf-frontends/export/csv', [RtmfFrontendController::class, 'export']);
         Route::post('/rtmf-frontends/import', [RtmfFrontendController::class, 'import']);
         Route::apiResource('rtmf-frontends', RtmfFrontendController::class)->only(['index', 'show', 'store', 'update', 'destroy']);
+        Route::post('/rtmf-frontends/{id}/duplicate', [RtmfFrontendController::class, 'duplicate']);
         Route::get('/rtmf-frontends/{id}/incoming-links', [RtmfFrontendController::class, 'incomingLinks']);
         Route::get('/rtmf-frontends/{id}/attachments', [RtmfFrontendAttachmentController::class, 'index']);
         Route::post('/rtmf-frontends/{id}/attachments', [RtmfFrontendAttachmentController::class, 'store']);
+        Route::post('/rtmf-frontends/{id}/attachments/link', [RtmfFrontendAttachmentController::class, 'link']);
         Route::patch('/rtmf-frontends/{id}/attachments/{attachmentId}', [RtmfFrontendAttachmentController::class, 'update']);
         Route::delete('/rtmf-frontends/{id}/attachments/{attachmentId}', [RtmfFrontendAttachmentController::class, 'destroy']);
         Route::get('/rtmf-frontends/{frontendId}/items', [RtmfFrontendItemController::class, 'index']);
