@@ -3,7 +3,9 @@
 .idea
 .vscode
 *.md
-docs
+!CHANGELOG.md
+docs/*
+!docs/CHANGELOG.md
 node_modules
 vendor
 client/node_modules

@@ -16,8 +16,14 @@ class ChangelogController extends Controller
 
     public function show(): JsonResponse
     {
+        $content = trim((string) $this->settings->get('changelog', ''));
+
+        if ($content === '') {
+            $content = $this->readBundledChangelog();
+        }
+
         return $this->sendOk([
-            'content' => $this->settings->get('changelog', ''),
+            'content' => $content,
         ]);
     }
 
@@ -30,5 +36,22 @@ class ChangelogController extends Controller
         $this->settings->set('changelog', $request->input('content'));
 
         return $this->sendOk(['success' => true]);
+    }
+
+    /**
+     * Default changelog shipped with the app (survives redeploy when settings row is empty).
+     */
+    private function readBundledChangelog(): string
+    {
+        foreach ([
+            base_path('CHANGELOG.md'),
+            base_path('docs/CHANGELOG.md'),
+        ] as $path) {
+            if (is_file($path) && is_readable($path)) {
+                return (string) file_get_contents($path);
+            }
+        }
+
+        return '';
     }
 }
