@@ -379,7 +379,7 @@ export async function listRtmfProjectMembers(projectId: number) {
   return apiRequest<{ data: RtmfProjectMember[] }>(`/api/rtmf-projects/${projectId}/members`);
 }
 
-export async function addRtmfProjectMember(projectId: number, input: { userId: number; projectRole?: string }) {
+export async function addRtmfProjectMember(projectId: number, input: { externalUserId: string; projectRole?: string }) {
   return apiRequest<{ data: RtmfProjectMember }>(`/api/rtmf-projects/${projectId}/members`, {
     method: "POST",
     body: JSON.stringify(input),

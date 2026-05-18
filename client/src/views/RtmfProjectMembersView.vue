@@ -126,7 +126,7 @@ async function confirmAdd() {
   const user = selectedUser.value;
   adding.value = true;
   try {
-    await addRtmfProjectMember(projectId, { userId: user.id, projectRole: addRole.value });
+    await addRtmfProjectMember(projectId, { externalUserId: user.id, projectRole: addRole.value });
     await loadMembers();
     toast.success(`${user.name} added as ${roleLabelFor(addRole.value)}`);
     clearSelection();
