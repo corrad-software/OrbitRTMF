@@ -28,7 +28,10 @@ const doneFilter = ref<"" | "1" | "0">("");
 const rangeStart = computed(() => (total.value === 0 ? 0 : (page.value - 1) * limit.value + 1));
 const rangeEnd = computed(() => Math.min(page.value * limit.value, total.value));
 
+let loadSeq = 0;
+
 async function load() {
+  const seq = ++loadSeq;
   loading.value = true;
   const params = new URLSearchParams({ page: String(page.value), limit: String(limit.value) });
   if (q.value) params.set("q", q.value);
@@ -38,13 +41,15 @@ async function load() {
   if (pid) params.set("project_id", String(pid));
   try {
     const response = await listRtmfFrontends(`?${params.toString()}`);
+    if (seq !== loadSeq) return;
     rows.value = response.data;
     total.value = (response.meta?.total as number) ?? response.data.length;
     totalPages.value = (response.meta?.totalPages as number) ?? (Math.ceil(total.value / limit.value) || 1);
   } catch (e) {
+    if (seq !== loadSeq) return;
     toast.error("Failed to load", e instanceof Error ? e.message : "API error");
   } finally {
-    loading.value = false;
+    if (seq === loadSeq) loading.value = false;
   }
 }
 

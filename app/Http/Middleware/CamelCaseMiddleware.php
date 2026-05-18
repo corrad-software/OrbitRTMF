@@ -19,6 +19,12 @@ class CamelCaseMiddleware
 
         $response = $next($request);
 
+        // Prevent reverse proxies/CDNs from caching paginated API GET responses
+        if ($request->isMethod('GET')) {
+            $response->headers->set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+            $response->headers->set('Pragma', 'no-cache');
+        }
+
         // Convert outgoing snake_case keys to camelCase
         if ($response instanceof JsonResponse) {
             $data = $response->getData(true);
