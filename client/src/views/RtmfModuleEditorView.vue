@@ -488,6 +488,7 @@ onUnmounted(() => {
 
             <!-- Add button -->
             <button
+              v-if="projectStore.canEdit"
               type="button"
               class="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-md border border-dashed border-slate-300 text-slate-400 hover:border-violet-400 hover:text-violet-500 disabled:opacity-50"
               :disabled="modulePhotoUploading"
@@ -515,7 +516,7 @@ onUnmounted(() => {
           <h2 class="text-sm font-semibold text-slate-900">Sub-modules</h2>
           <span class="ml-1 rounded-full bg-slate-100 px-1.5 py-0.5 text-xs font-medium text-slate-500">{{ subModules.length }}</span>
           <button
-            v-if="editingId === null"
+            v-if="editingId === null && projectStore.canEdit"
             type="button"
             class="ml-auto flex items-center gap-1.5 rounded-md bg-slate-900 px-2.5 py-1 text-xs font-medium text-white transition-colors hover:bg-slate-800"
             @click="startAdd(null)"
@@ -609,6 +610,7 @@ onUnmounted(() => {
                 :class="editingId === item.node.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'"
               >
                 <button
+                  v-if="projectStore.canEdit"
                   type="button"
                   class="flex h-6 w-6 items-center justify-center rounded text-slate-400 hover:bg-violet-100 hover:text-violet-600"
                   title="Add child"
@@ -617,6 +619,7 @@ onUnmounted(() => {
                   <Plus class="h-3 w-3" />
                 </button>
                 <button
+                  v-if="projectStore.canEdit"
                   type="button"
                   class="flex h-6 w-6 items-center justify-center rounded text-slate-400 hover:bg-slate-100 hover:text-slate-700"
                   title="Edit"
@@ -625,6 +628,7 @@ onUnmounted(() => {
                   <Pencil class="h-3 w-3" />
                 </button>
                 <button
+                  v-if="projectStore.canEdit"
                   type="button"
                   class="flex h-6 w-6 items-center justify-center rounded text-slate-400 hover:bg-rose-50 hover:text-rose-600"
                   title="Delete"
@@ -704,6 +708,7 @@ onUnmounted(() => {
                   </div>
                   <!-- Delete button (top-right corner) -->
                   <button
+                    v-if="projectStore.canEdit"
                     type="button"
                     class="absolute right-0.5 top-0.5 flex h-5 w-5 items-center justify-center rounded bg-black/60 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-rose-600"
                     title="Delete photo"
@@ -714,6 +719,7 @@ onUnmounted(() => {
                 </div>
               </div>
               <button
+                v-if="projectStore.canEdit"
                 type="button"
                 class="flex items-center gap-1.5 rounded-md border border-dashed border-slate-300 px-2.5 py-1.5 text-xs font-medium text-slate-500 hover:border-violet-400 hover:text-violet-600 disabled:opacity-50"
                 :disabled="photoUploading"
