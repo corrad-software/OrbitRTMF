@@ -430,7 +430,10 @@ onUnmounted(() => {
           <span class="text-slate-300">/</span>
           <span class="text-slate-700">{{ isEdit ? 'Edit' : 'New' }}</span>
         </nav>
-        <h1 class="page-title">{{ isEdit ? 'Edit Module' : 'New Module' }}</h1>
+        <div class="flex items-center gap-2">
+          <h1 class="page-title">{{ isEdit ? 'Edit Module' : 'New Module' }}</h1>
+          <span v-if="!projectStore.canEdit" class="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-500">Read only</span>
+        </div>
       </div>
 
       <!-- Module details -->
@@ -443,15 +446,15 @@ onUnmounted(() => {
         <div class="grid gap-3 p-4 md:grid-cols-2">
           <div class="space-y-1.5">
             <label class="text-sm font-medium text-slate-700">Name</label>
-            <input v-model="name" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200" placeholder="Profiling" />
+            <input v-model="name" :readonly="!projectStore.canEdit" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200 read-only:cursor-default read-only:focus:border-slate-300 read-only:focus:ring-0 read-only:focus:shadow-sm" placeholder="Profiling" />
           </div>
           <div class="space-y-1.5">
             <label class="text-sm font-medium text-slate-700">Code</label>
-            <input v-model="code" class="w-full rounded-lg border border-slate-300 px-3 py-2 font-mono text-sm shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200" placeholder="PRF" />
+            <input v-model="code" :readonly="!projectStore.canEdit" class="w-full rounded-lg border border-slate-300 px-3 py-2 font-mono text-sm shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200 read-only:cursor-default read-only:focus:border-slate-300 read-only:focus:ring-0 read-only:focus:shadow-sm" placeholder="PRF" />
           </div>
           <div class="space-y-1.5 md:col-span-2">
             <label class="text-sm font-medium text-slate-700">Description</label>
-            <textarea v-model="description" rows="3" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200" />
+            <textarea v-model="description" rows="3" :readonly="!projectStore.canEdit" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200 read-only:cursor-default read-only:focus:border-slate-300 read-only:focus:ring-0 read-only:focus:shadow-sm" />
           </div>
         </div>
 
@@ -653,7 +656,8 @@ onUnmounted(() => {
               <label class="text-xs font-medium text-slate-600">Code <span class="text-rose-400">*</span></label>
               <input
                 v-model="draft.code"
-                class="w-full rounded-md border border-slate-300 px-2.5 py-1.5 font-mono text-sm focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100"
+                :readonly="!projectStore.canEdit"
+                class="w-full rounded-md border border-slate-300 px-2.5 py-1.5 font-mono text-sm focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100 read-only:cursor-default read-only:focus:border-slate-300 read-only:focus:ring-0"
                 placeholder="PRF-AS-01"
               />
             </div>
@@ -661,7 +665,8 @@ onUnmounted(() => {
               <label class="text-xs font-medium text-slate-600">Name <span class="text-rose-400">*</span></label>
               <input
                 v-model="draft.name"
-                class="w-full rounded-md border border-slate-300 px-2.5 py-1.5 text-sm focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100"
+                :readonly="!projectStore.canEdit"
+                class="w-full rounded-md border border-slate-300 px-2.5 py-1.5 text-sm focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100 read-only:cursor-default read-only:focus:border-slate-300 read-only:focus:ring-0"
                 placeholder="Nama sub-modul"
               />
             </div>
@@ -669,7 +674,8 @@ onUnmounted(() => {
               <label class="text-xs font-medium text-slate-600">Description</label>
               <input
                 v-model="draft.description"
-                class="w-full rounded-md border border-slate-300 px-2.5 py-1.5 text-sm focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100"
+                :readonly="!projectStore.canEdit"
+                class="w-full rounded-md border border-slate-300 px-2.5 py-1.5 text-sm focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100 read-only:cursor-default read-only:focus:border-slate-300 read-only:focus:ring-0"
               />
             </div>
           </div>
