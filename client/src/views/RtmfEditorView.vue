@@ -1098,7 +1098,7 @@ onMounted(async () => {
                 <div class="min-w-0 flex-1 space-y-0.5">
                   <input :readonly="!projectStore.canEdit"
                     v-model="att.label"
-                    @blur="saveAttachmentLabel(att)"
+                    @blur="projectStore.canEdit && saveAttachmentLabel(att)"
                     class="w-full rounded border border-transparent px-1 py-0.5 text-xs text-slate-700 hover:border-slate-200 focus:border-slate-300 focus:outline-none focus:ring-1 focus:ring-slate-200"
                     placeholder="Add label…"
                   />
@@ -1168,7 +1168,7 @@ onMounted(async () => {
                 <!-- Endpoint URL -->
                 <input :readonly="!projectStore.canEdit"
                   v-model="ep.endpoint"
-                  @blur="saveApiEndpoint(ep)"
+                  @blur="projectStore.canEdit && saveApiEndpoint(ep)"
                   class="w-full rounded-lg border border-slate-200 px-2.5 py-1.5 font-mono text-xs text-slate-700 shadow-sm focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100"
                   placeholder="/api/resource"
                 />
@@ -1176,7 +1176,7 @@ onMounted(async () => {
                 <!-- Description -->
                 <input :readonly="!projectStore.canEdit"
                   v-model="ep.description"
-                  @blur="saveApiEndpoint(ep)"
+                  @blur="projectStore.canEdit && saveApiEndpoint(ep)"
                   class="w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs text-slate-700 shadow-sm focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100"
                   placeholder="What this call does…"
                 />
@@ -1349,7 +1349,7 @@ onMounted(async () => {
                 <!-- Label / Field -->
                 <input :readonly="!projectStore.canEdit"
                   v-model="item.label"
-                  @blur="saveItem(item)"
+                  @blur="projectStore.canEdit && saveItem(item)"
                   class="w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-sm text-slate-700 shadow-sm focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100"
                   placeholder="e.g. Jenis Pengenalan"
                 />
@@ -1357,7 +1357,7 @@ onMounted(async () => {
                 <!-- Field Name -->
                 <input :readonly="!projectStore.canEdit"
                   v-model="item.tableFieldname"
-                  @blur="saveItem(item)"
+                  @blur="projectStore.canEdit && saveItem(item)"
                   class="w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-sm text-slate-700 shadow-sm focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100"
                   placeholder="e.g. nama_penuh"
                 />
@@ -1367,7 +1367,7 @@ onMounted(async () => {
                   v-if="!isActionType(item.type)"
                   v-auto-resize
                   v-model="item.condition"
-                  @blur="saveItem(item)"
+                  @blur="projectStore.canEdit && saveItem(item)"
                   class="w-full resize-none rounded-lg border border-slate-200 px-2.5 py-1.5 text-sm text-slate-700 shadow-sm focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100"
                   style="min-height: 3.5rem; height: 3.5rem"
                   placeholder="e.g. status ≠ DRAF"
@@ -1378,15 +1378,15 @@ onMounted(async () => {
                     <input :readonly="!projectStore.canEdit"
                       :value="pair.c"
                       @input="conditionLines[item.id][li].c = ($event.target as HTMLInputElement).value"
-                      @blur="item.condition = serializeConditionLines(item.id); saveItem(item)"
+                      @blur="projectStore.canEdit && (item.condition = serializeConditionLines(item.id), saveItem(item))"
                       class="h-8 w-full rounded-md border border-slate-200 px-2 py-0 text-sm text-slate-700 shadow-sm focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100"
                       placeholder="e.g. status = AKTIF"
                     />
-                    <button type="button" @click="removeConditionLine(item, li)" class="flex-shrink-0 text-slate-300 hover:text-rose-500">
+                    <button v-if="projectStore.canEdit" type="button" @click="removeConditionLine(item, li)" class="flex-shrink-0 text-slate-300 hover:text-rose-500">
                       <X class="h-3.5 w-3.5" />
                     </button>
                   </div>
-                  <button type="button" @click="addConditionLine(item)" class="flex h-5 items-center gap-0.5 text-xs text-violet-500 hover:underline">
+                  <button v-if="projectStore.canEdit" type="button" @click="addConditionLine(item)" class="flex h-5 items-center gap-0.5 text-xs text-violet-500 hover:underline">
                     <Plus class="h-3 w-3" />Add
                   </button>
                 </div>
@@ -1396,7 +1396,7 @@ onMounted(async () => {
                   v-if="!isActionType(item.type)"
                   v-auto-resize
                   v-model="item.validation"
-                  @blur="saveItem(item)"
+                  @blur="projectStore.canEdit && saveItem(item)"
                   class="w-full resize-none rounded-lg border border-slate-200 px-2.5 py-1.5 text-sm text-slate-700 shadow-sm focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100"
                   style="min-height: 3.5rem; height: 3.5rem"
                   placeholder="e.g. Max 255, Email"
@@ -1413,6 +1413,7 @@ onMounted(async () => {
                       <span class="flex-shrink-0 font-mono text-[10px] text-violet-700">{{ pageForLine(item.id, li)!.specId }}</span>
                       <span class="min-w-0 flex-1 truncate text-xs text-slate-600">{{ pageForLine(item.id, li)!.title }}</span>
                       <button
+                        v-if="projectStore.canEdit"
                         type="button"
                         @click="conditionLines[item.id][li].p = null; item.condition = serializeConditionLines(item.id); saveItem(item)"
                         class="flex-shrink-0 text-slate-400 hover:text-rose-500"
@@ -1425,7 +1426,7 @@ onMounted(async () => {
                     >
                       <span class="flex-shrink-0 font-mono text-[10px] text-slate-400">{{ linksLoading ? 'Loading…' : `#${pair.p} (not found)` }}</span>
                       <button
-                        v-if="!linksLoading"
+                        v-if="!linksLoading && projectStore.canEdit"
                         type="button"
                         @click="conditionLines[item.id][li].p = null; item.condition = serializeConditionLines(item.id); saveItem(item)"
                         class="flex-shrink-0 text-slate-300 hover:text-rose-500"
@@ -1676,13 +1677,13 @@ onMounted(async () => {
               <div class="flex-1 space-y-2">
                 <input :readonly="!projectStore.canEdit"
                   v-model="group.title"
-                  @blur="saveScenarioGroup(group)"
+                  @blur="projectStore.canEdit && saveScenarioGroup(group)"
                   class="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-800 placeholder-slate-400 focus:border-violet-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-violet-100"
                   placeholder="Group title e.g. Senario 1: Pendaftaran"
                 />
                 <textarea :readonly="!projectStore.canEdit"
                   v-model="group.description"
-                  @blur="saveScenarioGroup(group)"
+                  @blur="projectStore.canEdit && saveScenarioGroup(group)"
                   rows="2"
                   class="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600 placeholder-slate-400 focus:border-violet-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-violet-100"
                   placeholder="Optional group description…"
