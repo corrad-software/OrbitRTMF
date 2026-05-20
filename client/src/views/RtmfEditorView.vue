@@ -931,12 +931,15 @@ onMounted(async () => {
               <label
                 v-for="a in actors"
                 :key="a.id"
-                class="flex cursor-pointer items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors"
-                :class="actorIds.includes(a.id)
-                  ? 'border-violet-600 bg-violet-600 text-white'
-                  : 'border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300 hover:bg-slate-100'"
+                :class="[
+                  actorIds.includes(a.id)
+                    ? 'border-violet-600 bg-violet-600 text-white'
+                    : 'border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300 hover:bg-slate-100',
+                  projectStore.canEdit ? 'cursor-pointer' : 'pointer-events-none',
+                ]"
+                class="flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors"
               >
-                <input :readonly="!projectStore.canEdit" type="checkbox" :value="a.id" v-model="actorIds" class="hidden" />
+                <input type="checkbox" :value="a.id" v-model="actorIds" class="hidden" />
                 {{ a.name }}
               </label>
               <span v-if="actors.length === 0" class="px-1 text-xs text-slate-400">No actors defined yet.</span>
@@ -1446,11 +1449,12 @@ onMounted(async () => {
 
                 <!-- Mandatory -->
                 <div class="flex items-center justify-center pt-1.5">
-                  <input :readonly="!projectStore.canEdit"
+                  <input
                     type="checkbox"
                     v-model="item.mandatory"
-                    @change="saveItem(item)"
-                    class="h-4 w-4 cursor-pointer rounded border-slate-300 accent-violet-600"
+                    @change="projectStore.canEdit && saveItem(item)"
+                    :class="projectStore.canEdit ? 'cursor-pointer' : 'pointer-events-none'"
+                    class="h-4 w-4 rounded border-slate-300 accent-violet-600"
                   />
                 </div>
 
