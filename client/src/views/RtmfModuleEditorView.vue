@@ -729,6 +729,7 @@ onUnmounted(() => {
 
           <div class="mt-3 flex items-center gap-2">
             <button
+              v-if="projectStore.canEdit"
               class="rounded-md bg-slate-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-800"
               @click="saveSub"
             >
@@ -746,13 +747,13 @@ onUnmounted(() => {
 
       <!-- Footer actions -->
       <div class="flex items-center gap-3">
-        <button class="flex items-center gap-2 rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-slate-800" @click="save">
+        <button v-if="projectStore.canEdit" class="flex items-center gap-2 rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-slate-800" @click="save">
           <Save class="h-4 w-4" />{{ isEdit ? 'Update' : 'Create' }}
         </button>
         <button class="flex items-center gap-2 rounded-lg border border-slate-300 px-5 py-2.5 text-sm font-medium text-slate-600 shadow-sm hover:bg-slate-50" @click="router.push('/admin/rtmf/modules')">
           <X class="h-4 w-4" />Cancel
         </button>
-        <button v-if="isEdit" class="ml-auto flex items-center gap-2 rounded-lg border border-rose-200 px-5 py-2.5 text-sm font-medium text-rose-600 shadow-sm hover:bg-rose-50" @click="remove">
+        <button v-if="isEdit && projectStore.canEdit" class="ml-auto flex items-center gap-2 rounded-lg border border-rose-200 px-5 py-2.5 text-sm font-medium text-rose-600 shadow-sm hover:bg-rose-50" @click="remove">
           <Trash2 class="h-4 w-4" />Delete
         </button>
       </div>

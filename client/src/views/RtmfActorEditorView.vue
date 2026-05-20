@@ -85,9 +85,9 @@ onMounted(load);
         </div>
       </article>
       <div class="flex items-center gap-3">
-        <button class="flex items-center gap-2 rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-slate-800" @click="save"><Save class="h-4 w-4" />{{ isEdit ? 'Update' : 'Create' }}</button>
+        <button v-if="projectStore.canEdit" class="flex items-center gap-2 rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-slate-800" @click="save"><Save class="h-4 w-4" />{{ isEdit ? 'Update' : 'Create' }}</button>
         <button class="flex items-center gap-2 rounded-lg border border-slate-300 px-5 py-2.5 text-sm font-medium text-slate-600 shadow-sm hover:bg-slate-50" @click="router.push('/admin/rtmf/actors')"><X class="h-4 w-4" />Cancel</button>
-        <button v-if="isEdit" class="ml-auto flex items-center gap-2 rounded-lg border border-rose-200 px-5 py-2.5 text-sm font-medium text-rose-600 shadow-sm hover:bg-rose-50" @click="remove"><Trash2 class="h-4 w-4" />Delete</button>
+        <button v-if="isEdit && projectStore.canEdit" class="ml-auto flex items-center gap-2 rounded-lg border border-rose-200 px-5 py-2.5 text-sm font-medium text-rose-600 shadow-sm hover:bg-rose-50" @click="remove"><Trash2 class="h-4 w-4" />Delete</button>
       </div>
     </div>
   </AdminLayout>
