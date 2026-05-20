@@ -1,12 +1,10 @@
 <script setup lang="ts">
 import { onMounted, ref } from "vue";
-import { useRouter } from "vue-router";
 import { FolderKanban, ArrowRight, Users } from "lucide-vue-next";
 import AdminLayout from "@/layouts/AdminLayout.vue";
 import { listRtmfProjects } from "@/api/rtmf";
 import type { RtmfProject } from "@/types";
 
-const router = useRouter();
 const projects = ref<RtmfProject[]>([]);
 const loading = ref(true);
 
@@ -38,10 +36,6 @@ onMounted(async () => {
   try {
     const res = await listRtmfProjects();
     projects.value = res.data;
-    if (res.data.length === 1) {
-      enterProject(res.data[0]);
-      return;
-    }
   } finally {
     loading.value = false;
   }
