@@ -9,6 +9,25 @@ All notable changes to this project are documented in this file.
 - Redesign topbar with a darker "PowerBar" concept.
 - Build notification module and add topbar notifications dropdown (similar to settings) showing the latest 5 notifications.
 
+## [1.4.1] - 2026-05-21
+
+### Added
+- **Excel import for Form Items** — BA users can bulk-add form items from an Excel file directly in the page editor. An "Import XLS" button appears in the Form Items tab footer (edit mode only). The modal walks through three steps: download a pre-built template, upload an `.xlsx`/`.xls`/`.csv` file (drag-and-drop or browse), then review the parsed rows before saving. Rows with unrecognised types are flagged red and blocked; rows with an empty label show an amber warning. Individual rows can be toggled via checkboxes. A progress bar tracks saving and any per-row errors are listed. Items are appended to the existing list in correct `sort_order`. Template columns follow the same sequence as the page editor: **Type → Label → Field Name → Condition → Validation → Mandatory**, plus a "Type Reference" sheet listing all valid types by category.
+- **Pagination & search on Project Members page** (`/admin/rtmf/projects/:id/members`) — backend now accepts `page`, `limit` (default 15), and `q` (search by name/email) params and returns paginated meta. Frontend shows search input in the card header, numbered page buttons with ellipsis, Prev/Next controls, and total count. Adding or removing a member refreshes the list and resets/adjusts the page correctly.
+- **Legend on Page Catalog list** — row above the table shows BA/QA/DV role labels and the three status icons (Closed / In Progress / Open) with custom tooltips explaining each. Aligned right with 10px padding.
+- **Custom tooltips on review status badges** in the Page Catalog list rows — each BA/QA/DV badge now shows a Tailwind tooltip on hover (matching the assignee avatar tooltip style) displaying the role abbreviation and current status.
+
+### Changed
+- **Removed Technical role and feedback** — Technical project role removed from role picker, color maps, label maps (`AdminLayout`, `MainDashboardView`), `rtmfProject` store, and `RtmfFrontendFeedbackRole` type. Technical feedback removed from the editor Feedback tab, feedback controller, dashboard role cards (RTMF Dashboard and Catalog Tracking), and Page Catalog list badge loop.
+- **Review status badge size** in the Page Catalog list — circle 18×18 px, icon inside 12×12 px.
+- **Column order** on Page Catalog list — BA/QA/DV column moved before the Done column.
+
+### Fixed
+- **Textarea auto-resize glitch** on the RTMF page editor form items table — replaced `setTimeout(resize, 0)` with double `requestAnimationFrame` so layout is settled before measuring `scrollHeight`. Added `focus` event listener so clicking into a field corrects its height immediately.
+- **`admin@testagent.local` deletion** — backend `destroy()` now returns `403 PROTECTED_ACCOUNT` for this address; delete button hidden in the Users view.
+- **`technical` remaining in `rtmfProject` store** — permission derivation still included `"technical"` after the role removal; corrected.
+- **`MemberCandidate` type** — added missing `photoUrl?: string | null` field that the backend already returned.
+
 ## [1.4.0] - 2026-05-20
 
 ### Added

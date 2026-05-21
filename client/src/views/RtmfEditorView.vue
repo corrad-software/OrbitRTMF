@@ -6,6 +6,7 @@ import { Cable, Paperclip, Trash2, LayoutGrid, Save, Upload, X, Plus, TablePrope
 import AdminLayout from "@/layouts/AdminLayout.vue";
 import RichTextEditor from "@/components/RichTextEditor.vue";
 import MediaPickerModal from "@/components/MediaPickerModal.vue";
+import RtmfItemImportModal from "@/components/RtmfItemImportModal.vue";
 import {
   createRtmfFrontend,
   deleteRtmfFrontend,
@@ -56,9 +57,10 @@ const vAutoResize = {
       el.style.height = next + 'px';
       el.style.overflowY = el.scrollHeight > MAX ? 'auto' : 'hidden';
     };
-    // defer so the browser has laid out the element and scrollHeight is accurate
-    setTimeout(resize, 0);
+    // double rAF: wait for two paint frames so table layout is fully settled
+    requestAnimationFrame(() => requestAnimationFrame(resize));
     el.addEventListener('input', resize);
+    el.addEventListener('focus', resize);
   },
   updated(el: HTMLTextAreaElement) {
     const MIN = 56;
@@ -436,6 +438,14 @@ async function addItem() {
   initConditionLines(res.data);
 }
 
+function onItemsImported(imported: RtmfFrontendItem[]) {
+  imported.forEach(item => {
+    items.value.push(item);
+    initConditionLines(item);
+  });
+  showImportModal.value = false;
+}
+
 async function saveItem(item: RtmfFrontendItem) {
   const condition = isActionType(item.type)
     ? serializeConditionLines(item.id)
@@ -592,7 +602,6 @@ const feedbacks = ref<RtmfFrontendFeedback[]>([]);
 const FEEDBACK_ROLES = [
   { key: 'business_analyst' as const, label: 'Business Analyst' },
   { key: 'qa' as const,               label: 'QA' },
-  { key: 'technical' as const,        label: 'Technical' },
   { key: 'developer' as const,        label: 'Developer' },
 ];
 
@@ -719,6 +728,7 @@ async function removeMockup() {
 }
 
 const showLibraryPicker = ref(false);
+const showImportModal = ref(false);
 
 async function pickFromLibrary(item: import("@/types").AllAttachment) {
   showLibraryPicker.value = false;
@@ -831,6 +841,7 @@ onMounted(async () => {
           <span v-if="isDone" class="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">
             <CheckCircle2 class="h-3 w-3" /> Completed
           </span>
+          <span v-if="!projectStore.canEdit" class="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-500">Read only</span>
         </h1>
         <p v-if="isEdit && createdAt" class="mt-1 text-sm text-slate-500">
           Created {{ new Date(createdAt).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" }) }}
@@ -902,22 +913,22 @@ onMounted(async () => {
         <div class="grid gap-3 p-4 md:grid-cols-2">
           <div class="space-y-1.5 md:col-span-2">
             <label class="text-sm font-medium text-slate-700">Title <span class="text-rose-500">*</span></label>
-            <input v-model="title" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200" placeholder="Maklumat Peribadi" />
+            <input :readonly="!projectStore.canEdit" v-model="title" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200" placeholder="Maklumat Peribadi" />
           </div>
           <div class="space-y-1.5">
             <label class="text-sm font-medium text-slate-700">Page ID</label>
-            <input v-model="specId" class="w-full rounded-lg border border-slate-300 px-3 py-2 font-mono text-sm shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200" placeholder="PRF-AS-QS-02_01_01" />
+            <input :readonly="!projectStore.canEdit" v-model="specId" class="w-full rounded-lg border border-slate-300 px-3 py-2 font-mono text-sm shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200" placeholder="PRF-AS-QS-02_01_01" />
           </div>
           <div class="space-y-1.5">
             <label class="text-sm font-medium text-slate-700">Module <span class="text-rose-500">*</span></label>
-            <select v-model.number="moduleId" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200">
+            <select v-model.number="moduleId" :class="{ 'pointer-events-none': !projectStore.canEdit }" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200">
               <option :value="null">— select —</option>
               <option v-for="m in modules" :key="m.id" :value="m.id">{{ m.code }} — {{ m.name }}</option>
             </select>
           </div>
           <div class="space-y-1.5">
             <label class="text-sm font-medium text-slate-700">Sub-module</label>
-            <select v-model.number="subModuleId" :disabled="!moduleId" class="w-full rounded-lg border border-slate-300 px-3 py-2 font-mono text-sm shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200 disabled:bg-slate-50 disabled:text-slate-400">
+            <select v-model.number="subModuleId" :disabled="!moduleId" :class="{ 'pointer-events-none': !projectStore.canEdit }" class="w-full rounded-lg border border-slate-300 px-3 py-2 font-mono text-sm shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200 disabled:bg-slate-50 disabled:text-slate-400">
               <option :value="null">—</option>
               <option v-for="opt in subModuleOptions" :key="opt.id" :value="opt.id" :style="{ paddingLeft: `${opt.depth * 16}px` }">{{ opt.label }}</option>
             </select>
@@ -930,10 +941,13 @@ onMounted(async () => {
               <label
                 v-for="a in actors"
                 :key="a.id"
-                class="flex cursor-pointer items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors"
-                :class="actorIds.includes(a.id)
-                  ? 'border-violet-600 bg-violet-600 text-white'
-                  : 'border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300 hover:bg-slate-100'"
+                :class="[
+                  actorIds.includes(a.id)
+                    ? 'border-violet-600 bg-violet-600 text-white'
+                    : 'border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300 hover:bg-slate-100',
+                  projectStore.canEdit ? 'cursor-pointer' : 'pointer-events-none',
+                ]"
+                class="flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium transition-colors"
               >
                 <input type="checkbox" :value="a.id" v-model="actorIds" class="hidden" />
                 {{ a.name }}
@@ -944,11 +958,11 @@ onMounted(async () => {
           </div>
           <div class="space-y-1.5 md:col-span-2">
             <label class="text-sm font-medium text-slate-700">Business Requirement</label>
-            <textarea v-model="businessRequirement" rows="3" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200" />
+            <textarea :readonly="!projectStore.canEdit" v-model="businessRequirement" rows="3" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200" />
           </div>
           <div class="space-y-1.5 md:col-span-2">
             <label class="text-sm font-medium text-slate-700">Stakeholder Requirement <span class="text-xs font-normal text-slate-400">(URS)</span></label>
-            <textarea v-model="stakeholderRequirement" rows="3" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200" />
+            <textarea :readonly="!projectStore.canEdit" v-model="stakeholderRequirement" rows="3" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200" />
           </div>
         </div>
       </article>
@@ -1000,7 +1014,7 @@ onMounted(async () => {
               <!-- Search input -->
               <div v-if="projectStore.canEdit" class="relative">
                 <div v-if="assigneeDropdownOpen" class="fixed inset-0 z-10" @click="assigneeDropdownOpen = false" />
-                <input
+                <input :readonly="!projectStore.canEdit"
                   v-model="assigneeSearch"
                   placeholder="Search user…"
                   class="w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs text-slate-700 shadow-sm focus:border-violet-400 focus:outline-none focus:ring-1 focus:ring-violet-200"
@@ -1045,7 +1059,7 @@ onMounted(async () => {
               <div class="space-y-1.5">
                 <label class="text-xs font-medium text-slate-600">Mockup Link</label>
                 <div class="flex gap-1.5">
-                  <input v-model="vuePath" class="w-full rounded-lg border border-slate-300 px-2.5 py-1.5 font-mono text-xs shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200" placeholder="src/views/SomeView.vue" />
+                  <input :readonly="!projectStore.canEdit" v-model="vuePath" class="w-full rounded-lg border border-slate-300 px-2.5 py-1.5 font-mono text-xs shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200" placeholder="src/views/SomeView.vue" />
                   <a :href="vuePath || undefined" target="_blank" :tabindex="vuePath ? 0 : -1" class="flex items-center justify-center rounded-lg border border-slate-300 px-2 shadow-sm transition-colors" :class="vuePath ? 'text-slate-500 hover:border-violet-400 hover:text-violet-600' : 'pointer-events-none text-slate-300'">
                     <ExternalLink class="h-3.5 w-3.5" />
                   </a>
@@ -1054,7 +1068,7 @@ onMounted(async () => {
               <div class="space-y-1.5">
                 <label class="text-xs font-medium text-slate-600">URL <span class="font-normal text-slate-400">(DEV)</span></label>
                 <div class="flex gap-1.5">
-                  <input v-model="urlDev" class="w-full rounded-lg border border-slate-300 px-2.5 py-1.5 font-mono text-xs shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200" placeholder="http://localhost:5173/…" />
+                  <input :readonly="!projectStore.canEdit" v-model="urlDev" class="w-full rounded-lg border border-slate-300 px-2.5 py-1.5 font-mono text-xs shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200" placeholder="http://localhost:5173/…" />
                   <a :href="urlDev || undefined" target="_blank" :tabindex="urlDev ? 0 : -1" class="flex items-center justify-center rounded-lg border border-slate-300 px-2 shadow-sm transition-colors" :class="urlDev ? 'text-slate-500 hover:border-violet-400 hover:text-violet-600' : 'pointer-events-none text-slate-300'">
                     <ExternalLink class="h-3.5 w-3.5" />
                   </a>
@@ -1063,7 +1077,7 @@ onMounted(async () => {
               <div class="space-y-1.5">
                 <label class="text-xs font-medium text-slate-600">URL <span class="font-normal text-slate-400">(STG)</span></label>
                 <div class="flex gap-1.5">
-                  <input v-model="urlStg" class="w-full rounded-lg border border-slate-300 px-2.5 py-1.5 font-mono text-xs shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200" placeholder="https://stg.example.com/…" />
+                  <input :readonly="!projectStore.canEdit" v-model="urlStg" class="w-full rounded-lg border border-slate-300 px-2.5 py-1.5 font-mono text-xs shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200" placeholder="https://stg.example.com/…" />
                   <a :href="urlStg || undefined" target="_blank" :tabindex="urlStg ? 0 : -1" class="flex items-center justify-center rounded-lg border border-slate-300 px-2 shadow-sm transition-colors" :class="urlStg ? 'text-slate-500 hover:border-violet-400 hover:text-violet-600' : 'pointer-events-none text-slate-300'">
                     <ExternalLink class="h-3.5 w-3.5" />
                   </a>
@@ -1072,7 +1086,7 @@ onMounted(async () => {
               <div class="space-y-1.5">
                 <label class="text-xs font-medium text-slate-600">URL <span class="font-normal text-slate-400">(PRD)</span></label>
                 <div class="flex gap-1.5">
-                  <input v-model="urlPrd" class="w-full rounded-lg border border-slate-300 px-2.5 py-1.5 font-mono text-xs shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200" placeholder="https://app.example.com/…" />
+                  <input :readonly="!projectStore.canEdit" v-model="urlPrd" class="w-full rounded-lg border border-slate-300 px-2.5 py-1.5 font-mono text-xs shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200" placeholder="https://app.example.com/…" />
                   <a :href="urlPrd || undefined" target="_blank" :tabindex="urlPrd ? 0 : -1" class="flex items-center justify-center rounded-lg border border-slate-300 px-2 shadow-sm transition-colors" :class="urlPrd ? 'text-slate-500 hover:border-violet-400 hover:text-violet-600' : 'pointer-events-none text-slate-300'">
                     <ExternalLink class="h-3.5 w-3.5" />
                   </a>
@@ -1092,9 +1106,9 @@ onMounted(async () => {
               <div v-for="att in attachments" :key="att.id" class="flex items-center gap-2 px-3 py-2">
                 <Paperclip class="h-3.5 w-3.5 shrink-0 text-slate-400" />
                 <div class="min-w-0 flex-1 space-y-0.5">
-                  <input
+                  <input :readonly="!projectStore.canEdit"
                     v-model="att.label"
-                    @blur="saveAttachmentLabel(att)"
+                    @blur="projectStore.canEdit && saveAttachmentLabel(att)"
                     class="w-full rounded border border-transparent px-1 py-0.5 text-xs text-slate-700 hover:border-slate-200 focus:border-slate-300 focus:outline-none focus:ring-1 focus:ring-slate-200"
                     placeholder="Add label…"
                   />
@@ -1110,8 +1124,8 @@ onMounted(async () => {
               </div>
               <!-- Upload row -->
               <div v-if="projectStore.canEdit" class="space-y-2 p-3">
-                <input id="attachment-file-input" type="file" @change="onFileChange" class="block w-full rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs text-slate-700 shadow-sm file:mr-2 file:rounded file:border-0 file:bg-slate-100 file:px-2 file:py-0.5 file:text-xs file:font-medium hover:file:bg-slate-200" />
-                <input v-model="uploadLabel" class="w-full rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200" placeholder="Label (optional)" />
+                <input :readonly="!projectStore.canEdit" id="attachment-file-input" type="file" @change="onFileChange" class="block w-full rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs text-slate-700 shadow-sm file:mr-2 file:rounded file:border-0 file:bg-slate-100 file:px-2 file:py-0.5 file:text-xs file:font-medium hover:file:bg-slate-200" />
+                <input :readonly="!projectStore.canEdit" v-model="uploadLabel" class="w-full rounded-lg border border-slate-300 px-2.5 py-1.5 text-xs shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200" placeholder="Label (optional)" />
                 <button
                   :disabled="!uploadFile || uploading"
                   @click="handleUpload"
@@ -1154,25 +1168,25 @@ onMounted(async () => {
                 <!-- Method -->
                 <select
                   v-model="ep.method"
-                  @change="saveApiEndpoint(ep)"
+                  @change="projectStore.canEdit && saveApiEndpoint(ep)"
+                  :class="[METHOD_COLORS[ep.method], { 'pointer-events-none': !projectStore.canEdit }]"
                   class="w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs font-semibold shadow-sm focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100"
-                  :class="METHOD_COLORS[ep.method]"
                 >
                   <option v-for="m in HTTP_METHODS" :key="m" :value="m">{{ m }}</option>
                 </select>
 
                 <!-- Endpoint URL -->
-                <input
+                <input :readonly="!projectStore.canEdit"
                   v-model="ep.endpoint"
-                  @blur="saveApiEndpoint(ep)"
+                  @blur="projectStore.canEdit && saveApiEndpoint(ep)"
                   class="w-full rounded-lg border border-slate-200 px-2.5 py-1.5 font-mono text-xs text-slate-700 shadow-sm focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100"
                   placeholder="/api/resource"
                 />
 
                 <!-- Description -->
-                <input
+                <input :readonly="!projectStore.canEdit"
                   v-model="ep.description"
-                  @blur="saveApiEndpoint(ep)"
+                  @blur="projectStore.canEdit && saveApiEndpoint(ep)"
                   class="w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs text-slate-700 shadow-sm focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100"
                   placeholder="What this call does…"
                 />
@@ -1289,7 +1303,8 @@ onMounted(async () => {
                 <div class="space-y-0.5">
                 <select
                   v-model="item.type"
-                  @change="saveItem(item)"
+                  @change="projectStore.canEdit && saveItem(item)"
+                  :class="{ 'pointer-events-none': !projectStore.canEdit }"
                   class="w-full rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-sm text-slate-700 shadow-sm focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100"
                 >
                   <option :value="null">— select —</option>
@@ -1342,58 +1357,58 @@ onMounted(async () => {
                 </div>
 
                 <!-- Label / Field -->
-                <input
+                <input :readonly="!projectStore.canEdit"
                   v-model="item.label"
-                  @blur="saveItem(item)"
+                  @blur="projectStore.canEdit && saveItem(item)"
                   class="w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-sm text-slate-700 shadow-sm focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100"
                   placeholder="e.g. Jenis Pengenalan"
                 />
 
                 <!-- Field Name -->
-                <input
+                <input :readonly="!projectStore.canEdit"
                   v-model="item.tableFieldname"
-                  @blur="saveItem(item)"
+                  @blur="projectStore.canEdit && saveItem(item)"
                   class="w-full rounded-lg border border-slate-200 px-2.5 py-1.5 text-sm text-slate-700 shadow-sm focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100"
                   placeholder="e.g. nama_penuh"
                 />
 
                 <!-- Condition -->
-                <textarea
+                <textarea :readonly="!projectStore.canEdit"
                   v-if="!isActionType(item.type)"
                   v-auto-resize
                   v-model="item.condition"
-                  @blur="saveItem(item)"
+                  @blur="projectStore.canEdit && saveItem(item)"
                   class="w-full resize-none rounded-lg border border-slate-200 px-2.5 py-1.5 text-sm text-slate-700 shadow-sm focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100"
-                  style="min-height: 3.5rem; height: 3.5rem"
+                  style="min-height: 3.5rem"
                   placeholder="e.g. status ≠ DRAF"
                 />
                 <!-- Action: condition inputs, one per pair -->
                 <div v-else class="space-y-1">
                   <div v-for="(pair, li) in (conditionLines[item.id] ?? [{ c: '', p: null }])" :key="li" class="flex h-8 items-center gap-1">
-                    <input
+                    <input :readonly="!projectStore.canEdit"
                       :value="pair.c"
                       @input="conditionLines[item.id][li].c = ($event.target as HTMLInputElement).value"
-                      @blur="item.condition = serializeConditionLines(item.id); saveItem(item)"
+                      @blur="projectStore.canEdit && (item.condition = serializeConditionLines(item.id), saveItem(item))"
                       class="h-8 w-full rounded-md border border-slate-200 px-2 py-0 text-sm text-slate-700 shadow-sm focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100"
                       placeholder="e.g. status = AKTIF"
                     />
-                    <button type="button" @click="removeConditionLine(item, li)" class="flex-shrink-0 text-slate-300 hover:text-rose-500">
+                    <button v-if="projectStore.canEdit" type="button" @click="removeConditionLine(item, li)" class="flex-shrink-0 text-slate-300 hover:text-rose-500">
                       <X class="h-3.5 w-3.5" />
                     </button>
                   </div>
-                  <button type="button" @click="addConditionLine(item)" class="flex h-5 items-center gap-0.5 text-xs text-violet-500 hover:underline">
+                  <button v-if="projectStore.canEdit" type="button" @click="addConditionLine(item)" class="flex h-5 items-center gap-0.5 text-xs text-violet-500 hover:underline">
                     <Plus class="h-3 w-3" />Add
                   </button>
                 </div>
 
                 <!-- Validation / Page -->
-                <textarea
+                <textarea :readonly="!projectStore.canEdit"
                   v-if="!isActionType(item.type)"
                   v-auto-resize
                   v-model="item.validation"
-                  @blur="saveItem(item)"
+                  @blur="projectStore.canEdit && saveItem(item)"
                   class="w-full resize-none rounded-lg border border-slate-200 px-2.5 py-1.5 text-sm text-slate-700 shadow-sm focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100"
-                  style="min-height: 3.5rem; height: 3.5rem"
+                  style="min-height: 3.5rem"
                   placeholder="e.g. Max 255, Email"
                 />
                 <!-- Action: page picker per pair, aligned to condition rows -->
@@ -1408,6 +1423,7 @@ onMounted(async () => {
                       <span class="flex-shrink-0 font-mono text-[10px] text-violet-700">{{ pageForLine(item.id, li)!.specId }}</span>
                       <span class="min-w-0 flex-1 truncate text-xs text-slate-600">{{ pageForLine(item.id, li)!.title }}</span>
                       <button
+                        v-if="projectStore.canEdit"
                         type="button"
                         @click="conditionLines[item.id][li].p = null; item.condition = serializeConditionLines(item.id); saveItem(item)"
                         class="flex-shrink-0 text-slate-400 hover:text-rose-500"
@@ -1420,7 +1436,7 @@ onMounted(async () => {
                     >
                       <span class="flex-shrink-0 font-mono text-[10px] text-slate-400">{{ linksLoading ? 'Loading…' : `#${pair.p} (not found)` }}</span>
                       <button
-                        v-if="!linksLoading"
+                        v-if="!linksLoading && projectStore.canEdit"
                         type="button"
                         @click="conditionLines[item.id][li].p = null; item.condition = serializeConditionLines(item.id); saveItem(item)"
                         class="flex-shrink-0 text-slate-300 hover:text-rose-500"
@@ -1428,7 +1444,7 @@ onMounted(async () => {
                     </div>
                     <!-- Search -->
                     <div v-else class="h-8">
-                      <input
+                      <input :readonly="!projectStore.canEdit"
                         v-model="conditionPageSearch[`${item.id}_${li}`]"
                         class="h-8 w-full rounded-md border border-slate-200 px-2 py-0 text-sm text-slate-700 shadow-sm focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100"
                         placeholder="Search page…"
@@ -1447,8 +1463,9 @@ onMounted(async () => {
                   <input
                     type="checkbox"
                     v-model="item.mandatory"
-                    @change="saveItem(item)"
-                    class="h-4 w-4 cursor-pointer rounded border-slate-300 accent-violet-600"
+                    @change="projectStore.canEdit && saveItem(item)"
+                    :class="projectStore.canEdit ? 'cursor-pointer' : 'pointer-events-none'"
+                    class="h-4 w-4 rounded border-slate-300 accent-violet-600"
                   />
                 </div>
 
@@ -1459,13 +1476,20 @@ onMounted(async () => {
             </div>
           </div><!-- end overflow-x-auto -->
 
-          <div v-if="projectStore.canEdit" class="border-t border-slate-100 px-5 py-3">
+          <div v-if="projectStore.canEdit" class="flex items-center gap-2 border-t border-slate-100 px-5 py-3">
             <button
               @click="addItem"
               class="flex items-center gap-2 rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 shadow-sm transition-colors hover:bg-slate-50"
             >
               <Plus class="h-4 w-4" />
               Add Item
+            </button>
+            <button
+              @click="showImportModal = true"
+              class="flex items-center gap-2 rounded-lg border border-violet-300 bg-white px-4 py-2 text-sm font-medium text-violet-600 shadow-sm transition-colors hover:bg-violet-50"
+            >
+              <Upload class="h-4 w-4" />
+              Import XLS
             </button>
           </div>
         </article>
@@ -1668,15 +1692,15 @@ onMounted(async () => {
             <!-- Group header -->
             <div class="flex items-start gap-3">
               <div class="flex-1 space-y-2">
-                <input
+                <input :readonly="!projectStore.canEdit"
                   v-model="group.title"
-                  @blur="saveScenarioGroup(group)"
+                  @blur="projectStore.canEdit && saveScenarioGroup(group)"
                   class="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-semibold text-slate-800 placeholder-slate-400 focus:border-violet-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-violet-100"
                   placeholder="Group title e.g. Senario 1: Pendaftaran"
                 />
-                <textarea
+                <textarea :readonly="!projectStore.canEdit"
                   v-model="group.description"
-                  @blur="saveScenarioGroup(group)"
+                  @blur="projectStore.canEdit && saveScenarioGroup(group)"
                   rows="2"
                   class="w-full rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600 placeholder-slate-400 focus:border-violet-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-violet-100"
                   placeholder="Optional group description…"
@@ -1707,13 +1731,13 @@ onMounted(async () => {
                   :key="row.id"
                   class="grid min-w-[560px] grid-cols-[64px_160px_160px_1fr_32px] items-start gap-2 px-3 py-2"
                 >
-                  <input
+                  <input :readonly="!projectStore.canEdit"
                     v-model="row.step"
                     @blur="saveScenarioRow(group, row)"
                     class="w-full rounded border border-transparent px-1.5 py-1 font-mono text-xs text-slate-700 hover:border-slate-200 focus:border-slate-300 focus:outline-none focus:ring-1 focus:ring-slate-200"
                     placeholder="1"
                   />
-                  <input
+                  <input :readonly="!projectStore.canEdit"
                     v-model="row.fasa"
                     @blur="saveScenarioRow(group, row)"
                     class="w-full rounded border border-transparent px-1.5 py-1 text-xs text-slate-700 hover:border-slate-200 focus:border-slate-300 focus:outline-none focus:ring-1 focus:ring-slate-200"
@@ -1721,13 +1745,14 @@ onMounted(async () => {
                   />
                   <select
                     v-model="row.role"
-                    @change="saveScenarioRow(group, row)"
+                    @change="projectStore.canEdit && saveScenarioRow(group, row)"
+                    :class="{ 'pointer-events-none': !projectStore.canEdit }"
                     class="w-full rounded border border-transparent bg-transparent px-1.5 py-1 text-xs text-slate-700 hover:border-slate-200 focus:border-slate-300 focus:outline-none focus:ring-1 focus:ring-slate-200"
                   >
                     <option :value="null">—</option>
                     <option v-for="a in actors" :key="a.id" :value="a.name">{{ a.name }}</option>
                   </select>
-                  <textarea
+                  <textarea :readonly="!projectStore.canEdit"
                     v-model="row.aktiviti"
                     @blur="saveScenarioRow(group, row)"
                     rows="2"
@@ -1805,7 +1830,7 @@ onMounted(async () => {
                   <option value="reviewed">In Progress</option>
                   <option value="approved">Closed</option>
                 </select>
-                <textarea
+                <textarea :readonly="!projectStore.canEdit"
                   :value="feedbackFor(roleDef.key).comment ?? ''"
                   :disabled="!canEditFeedbackRow(roleDef.key)"
                   @blur="canEditFeedbackRow(roleDef.key) && saveFeedback(roleDef.key, { comment: ($event.target as HTMLTextAreaElement).value || null })"
@@ -1869,6 +1894,14 @@ onMounted(async () => {
     @upload="uploadFromPicker"
     @select="pickFromLibrary"
     @close="showLibraryPicker = false"
+  />
+
+  <RtmfItemImportModal
+    v-if="showImportModal"
+    :frontendId="id"
+    :existingCount="items.length"
+    @close="showImportModal = false"
+    @imported="onItemsImported"
   />
 
 </template>

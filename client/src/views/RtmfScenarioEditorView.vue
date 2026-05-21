@@ -535,7 +535,10 @@ onMounted(async () => {
           <span class="text-slate-300">/</span>
           <span class="text-slate-700">{{ isEdit ? 'Edit' : 'New' }}</span>
         </nav>
-        <h1 class="page-title">{{ isEdit ? (title || 'Scenario') : 'New Scenario' }}</h1>
+        <div class="flex items-center gap-2">
+          <h1 class="page-title">{{ isEdit ? (title || 'Scenario') : 'New Scenario' }}</h1>
+          <span v-if="!projectStore.canEdit" class="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-500">Read only</span>
+        </div>
       </div>
 
       <!-- ── Flow diagram — full width ── -->
@@ -757,8 +760,9 @@ onMounted(async () => {
                   <!-- Note -->
                   <input
                     v-model="step.note"
-                    @blur="saveStep(step)"
-                    class="w-full rounded-lg border border-slate-200 px-3 py-1.5 text-sm text-slate-700 shadow-sm focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100"
+                    :readonly="!projectStore.canEdit"
+                    @blur="projectStore.canEdit && saveStep(step)"
+                    class="w-full rounded-lg border border-slate-200 px-3 py-1.5 text-sm text-slate-700 shadow-sm focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100 read-only:cursor-default read-only:focus:border-slate-200 read-only:focus:ring-0 read-only:focus:shadow-sm"
                     placeholder="Note (optional)"
                   />
 
@@ -775,8 +779,9 @@ onMounted(async () => {
                       <!-- Condition input -->
                       <input
                         v-model="link.condition"
-                        @blur="saveLink(step, link)"
-                        class="w-28 flex-shrink-0 rounded border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700 focus:border-violet-400 focus:outline-none focus:ring-1 focus:ring-violet-100"
+                        :readonly="!projectStore.canEdit"
+                        @blur="projectStore.canEdit && saveLink(step, link)"
+                        class="w-28 flex-shrink-0 rounded border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700 focus:border-violet-400 focus:outline-none focus:ring-1 focus:ring-violet-100 read-only:cursor-default read-only:focus:border-slate-200 read-only:focus:ring-0"
                         placeholder="Condition…"
                       />
 
@@ -888,8 +893,9 @@ onMounted(async () => {
                 <label class="mb-1 block text-xs font-medium text-slate-600">Title <span class="text-rose-500">*</span></label>
                 <input
                   v-model="title"
-                  @blur="saveScenario"
-                  class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800 shadow-sm focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100"
+                  :readonly="!projectStore.canEdit"
+                  @blur="projectStore.canEdit && saveScenario()"
+                  class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-800 shadow-sm focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100 read-only:cursor-default read-only:focus:border-slate-200 read-only:focus:ring-0 read-only:focus:shadow-sm"
                   placeholder="e.g. User Registration Flow"
                 />
               </div>
@@ -898,7 +904,8 @@ onMounted(async () => {
                 <textarea
                   v-model="description"
                   rows="3"
-                  class="w-full resize-none rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100"
+                  :readonly="!projectStore.canEdit"
+                  class="w-full resize-none rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100 read-only:cursor-default read-only:focus:border-slate-200 read-only:focus:ring-0 read-only:focus:shadow-sm"
                   placeholder="Optional description…"
                 />
               </div>

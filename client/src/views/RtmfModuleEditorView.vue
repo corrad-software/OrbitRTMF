@@ -430,7 +430,10 @@ onUnmounted(() => {
           <span class="text-slate-300">/</span>
           <span class="text-slate-700">{{ isEdit ? 'Edit' : 'New' }}</span>
         </nav>
-        <h1 class="page-title">{{ isEdit ? 'Edit Module' : 'New Module' }}</h1>
+        <div class="flex items-center gap-2">
+          <h1 class="page-title">{{ isEdit ? 'Edit Module' : 'New Module' }}</h1>
+          <span v-if="!projectStore.canEdit" class="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-500">Read only</span>
+        </div>
       </div>
 
       <!-- Module details -->
@@ -443,15 +446,15 @@ onUnmounted(() => {
         <div class="grid gap-3 p-4 md:grid-cols-2">
           <div class="space-y-1.5">
             <label class="text-sm font-medium text-slate-700">Name</label>
-            <input v-model="name" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200" placeholder="Profiling" />
+            <input v-model="name" :readonly="!projectStore.canEdit" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200 read-only:cursor-default read-only:focus:border-slate-300 read-only:focus:ring-0 read-only:focus:shadow-sm" placeholder="Profiling" />
           </div>
           <div class="space-y-1.5">
             <label class="text-sm font-medium text-slate-700">Code</label>
-            <input v-model="code" class="w-full rounded-lg border border-slate-300 px-3 py-2 font-mono text-sm shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200" placeholder="PRF" />
+            <input v-model="code" :readonly="!projectStore.canEdit" class="w-full rounded-lg border border-slate-300 px-3 py-2 font-mono text-sm shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200 read-only:cursor-default read-only:focus:border-slate-300 read-only:focus:ring-0 read-only:focus:shadow-sm" placeholder="PRF" />
           </div>
           <div class="space-y-1.5 md:col-span-2">
             <label class="text-sm font-medium text-slate-700">Description</label>
-            <textarea v-model="description" rows="3" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200" />
+            <textarea v-model="description" rows="3" :readonly="!projectStore.canEdit" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200 read-only:cursor-default read-only:focus:border-slate-300 read-only:focus:ring-0 read-only:focus:shadow-sm" />
           </div>
         </div>
 
@@ -485,6 +488,7 @@ onUnmounted(() => {
 
             <!-- Add button -->
             <button
+              v-if="projectStore.canEdit"
               type="button"
               class="flex h-16 w-16 flex-shrink-0 items-center justify-center rounded-md border border-dashed border-slate-300 text-slate-400 hover:border-violet-400 hover:text-violet-500 disabled:opacity-50"
               :disabled="modulePhotoUploading"
@@ -512,7 +516,7 @@ onUnmounted(() => {
           <h2 class="text-sm font-semibold text-slate-900">Sub-modules</h2>
           <span class="ml-1 rounded-full bg-slate-100 px-1.5 py-0.5 text-xs font-medium text-slate-500">{{ subModules.length }}</span>
           <button
-            v-if="editingId === null"
+            v-if="editingId === null && projectStore.canEdit"
             type="button"
             class="ml-auto flex items-center gap-1.5 rounded-md bg-slate-900 px-2.5 py-1 text-xs font-medium text-white transition-colors hover:bg-slate-800"
             @click="startAdd(null)"
@@ -606,6 +610,7 @@ onUnmounted(() => {
                 :class="editingId === item.node.id ? 'opacity-100' : 'opacity-0 group-hover:opacity-100'"
               >
                 <button
+                  v-if="projectStore.canEdit"
                   type="button"
                   class="flex h-6 w-6 items-center justify-center rounded text-slate-400 hover:bg-violet-100 hover:text-violet-600"
                   title="Add child"
@@ -614,6 +619,7 @@ onUnmounted(() => {
                   <Plus class="h-3 w-3" />
                 </button>
                 <button
+                  v-if="projectStore.canEdit"
                   type="button"
                   class="flex h-6 w-6 items-center justify-center rounded text-slate-400 hover:bg-slate-100 hover:text-slate-700"
                   title="Edit"
@@ -622,6 +628,7 @@ onUnmounted(() => {
                   <Pencil class="h-3 w-3" />
                 </button>
                 <button
+                  v-if="projectStore.canEdit"
                   type="button"
                   class="flex h-6 w-6 items-center justify-center rounded text-slate-400 hover:bg-rose-50 hover:text-rose-600"
                   title="Delete"
@@ -653,7 +660,8 @@ onUnmounted(() => {
               <label class="text-xs font-medium text-slate-600">Code <span class="text-rose-400">*</span></label>
               <input
                 v-model="draft.code"
-                class="w-full rounded-md border border-slate-300 px-2.5 py-1.5 font-mono text-sm focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100"
+                :readonly="!projectStore.canEdit"
+                class="w-full rounded-md border border-slate-300 px-2.5 py-1.5 font-mono text-sm focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100 read-only:cursor-default read-only:focus:border-slate-300 read-only:focus:ring-0"
                 placeholder="PRF-AS-01"
               />
             </div>
@@ -661,7 +669,8 @@ onUnmounted(() => {
               <label class="text-xs font-medium text-slate-600">Name <span class="text-rose-400">*</span></label>
               <input
                 v-model="draft.name"
-                class="w-full rounded-md border border-slate-300 px-2.5 py-1.5 text-sm focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100"
+                :readonly="!projectStore.canEdit"
+                class="w-full rounded-md border border-slate-300 px-2.5 py-1.5 text-sm focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100 read-only:cursor-default read-only:focus:border-slate-300 read-only:focus:ring-0"
                 placeholder="Nama sub-modul"
               />
             </div>
@@ -669,7 +678,8 @@ onUnmounted(() => {
               <label class="text-xs font-medium text-slate-600">Description</label>
               <input
                 v-model="draft.description"
-                class="w-full rounded-md border border-slate-300 px-2.5 py-1.5 text-sm focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100"
+                :readonly="!projectStore.canEdit"
+                class="w-full rounded-md border border-slate-300 px-2.5 py-1.5 text-sm focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100 read-only:cursor-default read-only:focus:border-slate-300 read-only:focus:ring-0"
               />
             </div>
           </div>
@@ -698,6 +708,7 @@ onUnmounted(() => {
                   </div>
                   <!-- Delete button (top-right corner) -->
                   <button
+                    v-if="projectStore.canEdit"
                     type="button"
                     class="absolute right-0.5 top-0.5 flex h-5 w-5 items-center justify-center rounded bg-black/60 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-rose-600"
                     title="Delete photo"
@@ -708,6 +719,7 @@ onUnmounted(() => {
                 </div>
               </div>
               <button
+                v-if="projectStore.canEdit"
                 type="button"
                 class="flex items-center gap-1.5 rounded-md border border-dashed border-slate-300 px-2.5 py-1.5 text-xs font-medium text-slate-500 hover:border-violet-400 hover:text-violet-600 disabled:opacity-50"
                 :disabled="photoUploading"
@@ -729,6 +741,7 @@ onUnmounted(() => {
 
           <div class="mt-3 flex items-center gap-2">
             <button
+              v-if="projectStore.canEdit"
               class="rounded-md bg-slate-900 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-800"
               @click="saveSub"
             >
@@ -746,13 +759,13 @@ onUnmounted(() => {
 
       <!-- Footer actions -->
       <div class="flex items-center gap-3">
-        <button class="flex items-center gap-2 rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-slate-800" @click="save">
+        <button v-if="projectStore.canEdit" class="flex items-center gap-2 rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-slate-800" @click="save">
           <Save class="h-4 w-4" />{{ isEdit ? 'Update' : 'Create' }}
         </button>
         <button class="flex items-center gap-2 rounded-lg border border-slate-300 px-5 py-2.5 text-sm font-medium text-slate-600 shadow-sm hover:bg-slate-50" @click="router.push('/admin/rtmf/modules')">
           <X class="h-4 w-4" />Cancel
         </button>
-        <button v-if="isEdit" class="ml-auto flex items-center gap-2 rounded-lg border border-rose-200 px-5 py-2.5 text-sm font-medium text-rose-600 shadow-sm hover:bg-rose-50" @click="remove">
+        <button v-if="isEdit && projectStore.canEdit" class="ml-auto flex items-center gap-2 rounded-lg border border-rose-200 px-5 py-2.5 text-sm font-medium text-rose-600 shadow-sm hover:bg-rose-50" @click="remove">
           <Trash2 class="h-4 w-4" />Delete
         </button>
       </div>

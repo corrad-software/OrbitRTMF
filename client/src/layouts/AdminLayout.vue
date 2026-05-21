@@ -103,7 +103,24 @@ const userInitials = computed(() => {
     .slice(0, 2);
 });
 
-const userRoleLabel = computed(() => auth.user?.role || "Administrator");
+const PROJECT_ROLE_LABELS: Record<string, string> = {
+  admin:            "Admin",
+  business_analyst: "BA",
+  qa:               "QA",
+  developer:        "Developer",
+  viewer:           "Viewer",
+};
+
+const userRoleLabel = computed(() => {
+  const systemRole = auth.user?.role || "Administrator";
+  const activeProject = rtmfProjectStore.projects.find(
+    (p) => p.id === rtmfProjectStore.activeProjectId,
+  );
+  const projectRole = activeProject?.myRole
+    ? PROJECT_ROLE_LABELS[activeProject.myRole] ?? activeProject.myRole
+    : null;
+  return projectRole ? `${systemRole}, ${projectRole}` : systemRole;
+});
 
 const effectivePerms = computed((): string[] => {
   if (auth.isAdmin) return auth.permissions;

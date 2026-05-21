@@ -61,7 +61,10 @@ onMounted(load);
           <span class="text-slate-300">/</span>
           <span class="text-slate-700">{{ isEdit ? 'Edit' : 'New' }}</span>
         </nav>
-        <h1 class="page-title">{{ isEdit ? 'Edit Actor' : 'New Actor' }}</h1>
+        <div class="flex items-center gap-2">
+          <h1 class="page-title">{{ isEdit ? 'Edit Actor' : 'New Actor' }}</h1>
+          <span v-if="!projectStore.canEdit" class="rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-500">Read only</span>
+        </div>
       </div>
       <article class="rounded-lg border border-slate-200 bg-white shadow-sm">
         <div class="flex items-center gap-2 border-b border-slate-100 px-4 py-2.5">
@@ -72,22 +75,22 @@ onMounted(load);
         <div class="grid gap-3 p-4 md:grid-cols-2">
           <div class="space-y-1.5 md:col-span-2">
             <label class="text-sm font-medium text-slate-700">Name</label>
-            <input v-model="name" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200" placeholder="Pemohon/Pendaftar" />
+            <input v-model="name" :readonly="!projectStore.canEdit" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200 read-only:cursor-default read-only:focus:border-slate-300 read-only:focus:ring-0 read-only:focus:shadow-sm" placeholder="Pemohon/Pendaftar" />
           </div>
           <div class="space-y-1.5">
             <label class="text-sm font-medium text-slate-700">Sort Order</label>
-            <input v-model.number="sortOrder" type="number" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200" />
+            <input v-model.number="sortOrder" type="number" :readonly="!projectStore.canEdit" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200 read-only:cursor-default read-only:focus:border-slate-300 read-only:focus:ring-0 read-only:focus:shadow-sm" />
           </div>
           <div class="space-y-1.5 md:col-span-2">
             <label class="text-sm font-medium text-slate-700">Description</label>
-            <textarea v-model="description" rows="3" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200" />
+            <textarea v-model="description" rows="3" :readonly="!projectStore.canEdit" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200 read-only:cursor-default read-only:focus:border-slate-300 read-only:focus:ring-0 read-only:focus:shadow-sm" />
           </div>
         </div>
       </article>
       <div class="flex items-center gap-3">
-        <button class="flex items-center gap-2 rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-slate-800" @click="save"><Save class="h-4 w-4" />{{ isEdit ? 'Update' : 'Create' }}</button>
+        <button v-if="projectStore.canEdit" class="flex items-center gap-2 rounded-lg bg-slate-900 px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-slate-800" @click="save"><Save class="h-4 w-4" />{{ isEdit ? 'Update' : 'Create' }}</button>
         <button class="flex items-center gap-2 rounded-lg border border-slate-300 px-5 py-2.5 text-sm font-medium text-slate-600 shadow-sm hover:bg-slate-50" @click="router.push('/admin/rtmf/actors')"><X class="h-4 w-4" />Cancel</button>
-        <button v-if="isEdit" class="ml-auto flex items-center gap-2 rounded-lg border border-rose-200 px-5 py-2.5 text-sm font-medium text-rose-600 shadow-sm hover:bg-rose-50" @click="remove"><Trash2 class="h-4 w-4" />Delete</button>
+        <button v-if="isEdit && projectStore.canEdit" class="ml-auto flex items-center gap-2 rounded-lg border border-rose-200 px-5 py-2.5 text-sm font-medium text-rose-600 shadow-sm hover:bg-rose-50" @click="remove"><Trash2 class="h-4 w-4" />Delete</button>
       </div>
     </div>
   </AdminLayout>

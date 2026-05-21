@@ -14,8 +14,8 @@ use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
 /**
- * Comprehensive access-control tests for all 6 system roles:
- * Admin, BA, QA, Technical, Developer, Viewer
+ * Comprehensive access-control tests for all 5 system roles:
+ * Admin, BA, QA, Developer, Viewer
  *
  * Covers:
  *  - hasPermission() model method per role
@@ -34,7 +34,6 @@ class UserAccessControlTest extends TestCase
     private Role $adminRole;
     private Role $baRole;
     private Role $qaRole;
-    private Role $technicalRole;
     private Role $developerRole;
     private Role $viewerRole;
 
@@ -42,7 +41,6 @@ class UserAccessControlTest extends TestCase
     private User $admin;
     private User $ba;
     private User $qa;
-    private User $technical;
     private User $developer;
     private User $viewer;
 
@@ -70,11 +68,6 @@ class UserAccessControlTest extends TestCase
             ['description' => 'QA', 'permissions' => ['rtmf.view', 'rtmf.catalog', 'rtmf.tracker', 'rtmf.feedback']]
         );
 
-        $this->technicalRole = Role::firstOrCreate(
-            ['name' => 'Technical'],
-            ['description' => 'Technical', 'permissions' => ['rtmf.view', 'rtmf.catalog', 'rtmf.tracker', 'rtmf.feedback']]
-        );
-
         $this->developerRole = Role::firstOrCreate(
             ['name' => 'Developer'],
             ['description' => 'Developer', 'permissions' => ['rtmf.view', 'rtmf.catalog', 'rtmf.tracker', 'rtmf.feedback']]
@@ -86,12 +79,11 @@ class UserAccessControlTest extends TestCase
         );
 
         // ── Users ────────────────────────────────────────────────────────────
-        $this->admin     = $this->makeUser('admin',     'admin',     $this->adminRole);
-        $this->ba        = $this->makeUser('ba',        'BA',        $this->baRole);
-        $this->qa        = $this->makeUser('qa',        'QA',        $this->qaRole);
-        $this->technical = $this->makeUser('tech',      'Technical', $this->technicalRole);
-        $this->developer = $this->makeUser('dev',       'Developer', $this->developerRole);
-        $this->viewer    = $this->makeUser('viewer',    'Viewer',    $this->viewerRole);
+        $this->admin     = $this->makeUser('admin',  'admin',     $this->adminRole);
+        $this->ba        = $this->makeUser('ba',     'BA',        $this->baRole);
+        $this->qa        = $this->makeUser('qa',     'QA',        $this->qaRole);
+        $this->developer = $this->makeUser('dev',    'Developer', $this->developerRole);
+        $this->viewer    = $this->makeUser('viewer', 'Viewer',    $this->viewerRole);
 
         // ── Shared project + module ──────────────────────────────────────────
         $this->project = RtmfProject::create(['code' => 'UAC', 'name' => 'Access Control Test Project']);
@@ -171,17 +163,6 @@ class UserAccessControlTest extends TestCase
         $this->assertFalse($this->qa->hasPermission('rtmf.catalog.edit'));
         $this->assertFalse($this->qa->hasPermission('rtmf.manage'));
         $this->assertFalse($this->qa->hasPermission('users.view'));
-    }
-
-    public function test_technical_has_correct_permissions(): void
-    {
-        $this->assertTrue($this->technical->hasPermission('rtmf.view'));
-        $this->assertTrue($this->technical->hasPermission('rtmf.catalog'));
-        $this->assertTrue($this->technical->hasPermission('rtmf.tracker'));
-        $this->assertTrue($this->technical->hasPermission('rtmf.feedback'));
-
-        $this->assertFalse($this->technical->hasPermission('rtmf.catalog.edit'));
-        $this->assertFalse($this->technical->hasPermission('rtmf.manage'));
     }
 
     public function test_developer_has_correct_permissions(): void
@@ -284,7 +265,6 @@ class UserAccessControlTest extends TestCase
             'Admin'     => ['admin'],
             'BA'        => ['ba'],
             'QA'        => ['qa'],
-            'Technical' => ['technical'],
             'Developer' => ['developer'],
             'Viewer'    => ['viewer'],
         ];
@@ -331,7 +311,6 @@ class UserAccessControlTest extends TestCase
         return [
             'BA'        => ['ba'],
             'QA'        => ['qa'],
-            'Technical' => ['technical'],
             'Developer' => ['developer'],
             'Viewer'    => ['viewer'],
         ];
@@ -376,7 +355,6 @@ class UserAccessControlTest extends TestCase
     {
         return [
             'QA'        => ['qa',        'qa'],
-            'Technical' => ['technical', 'technical'],
             'Developer' => ['developer', 'developer'],
             'Viewer'    => ['viewer',    'viewer'],
         ];
@@ -398,7 +376,7 @@ class UserAccessControlTest extends TestCase
     {
         $frontend = $this->makeFrontend('FE-ADMIN-FB');
 
-        foreach (['business_analyst', 'qa', 'technical', 'developer'] as $role) {
+        foreach (['business_analyst', 'qa', 'developer'] as $role) {
             $this->actingAs($this->admin)
                 ->putJson("/api/rtmf-frontends/{$frontend->id}/feedbacks/{$role}", ['status' => 'reviewed'])
                 ->assertOk();
@@ -445,26 +423,6 @@ class UserAccessControlTest extends TestCase
             ->assertStatus(403);
     }
 
-    public function test_technical_project_member_can_write_technical_feedback(): void
-    {
-        $this->addProjectMember($this->technical, 'technical');
-        $frontend = $this->makeFrontend('FE-TECH-FB');
-
-        $this->actingAs($this->technical)
-            ->putJson("/api/rtmf-frontends/{$frontend->id}/feedbacks/technical", ['comment' => 'LGTM'])
-            ->assertOk();
-    }
-
-    public function test_technical_project_member_cannot_write_developer_feedback(): void
-    {
-        $this->addProjectMember($this->technical, 'technical');
-        $frontend = $this->makeFrontend('FE-TECH-FB2');
-
-        $this->actingAs($this->technical)
-            ->putJson("/api/rtmf-frontends/{$frontend->id}/feedbacks/developer", ['comment' => 'No'])
-            ->assertStatus(403);
-    }
-
     public function test_developer_project_member_can_write_developer_feedback(): void
     {
         $this->addProjectMember($this->developer, 'developer');
@@ -475,22 +433,12 @@ class UserAccessControlTest extends TestCase
             ->assertOk();
     }
 
-    public function test_developer_project_member_cannot_write_technical_feedback(): void
-    {
-        $this->addProjectMember($this->developer, 'developer');
-        $frontend = $this->makeFrontend('FE-DEV-FB2');
-
-        $this->actingAs($this->developer)
-            ->putJson("/api/rtmf-frontends/{$frontend->id}/feedbacks/technical", ['comment' => 'Nope'])
-            ->assertStatus(403);
-    }
-
     public function test_non_project_member_cannot_write_any_feedback(): void
     {
         $frontend = $this->makeFrontend('FE-NOMEM');
 
         // QA user, not a member of any project
-        foreach (['business_analyst', 'qa', 'technical', 'developer'] as $role) {
+        foreach (['business_analyst', 'qa', 'developer'] as $role) {
             $this->actingAs($this->qa)
                 ->putJson("/api/rtmf-frontends/{$frontend->id}/feedbacks/{$role}", ['comment' => 'x'])
                 ->assertStatus(403);
