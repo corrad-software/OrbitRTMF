@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { onMounted, ref } from "vue";
+import { useRouter } from "vue-router";
 import { FolderKanban, ArrowRight, Users } from "lucide-vue-next";
 import AdminLayout from "@/layouts/AdminLayout.vue";
 import { listRtmfProjects } from "@/api/rtmf";
 import type { RtmfProject } from "@/types";
 
+const router = useRouter();
 const projects = ref<RtmfProject[]>([]);
 const loading = ref(true);
 

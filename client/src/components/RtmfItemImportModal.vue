@@ -157,7 +157,7 @@ async function runImport() {
     } catch {
       importErrors.value.push(`Row ${i + 1} (${row.label || row.type}): failed to save`);
     }
-    importProgress.value = Math.round(((i + 1) / toImport.value.length) * 100);
+    importProgress.value = Math.round(((i + 1) / toImport.length) * 100);
   }
 
   importing.value = false;
