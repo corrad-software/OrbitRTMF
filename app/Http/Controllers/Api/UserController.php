@@ -164,6 +164,10 @@ class UserController extends Controller
             return $this->sendError(404, 'NOT_FOUND', 'User not found');
         }
 
+        if ($user->email === 'admin@testagent.local') {
+            return $this->sendError(403, 'PROTECTED_ACCOUNT', 'This account is protected and cannot be deleted');
+        }
+
         $user->delete();
 
         return $this->sendOk(['success' => true]);

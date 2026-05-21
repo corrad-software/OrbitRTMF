@@ -19,7 +19,6 @@ const SYSTEM_TO_PROJECT_ROLE: Record<string, string> = {
   admin: "admin",
   ba: "business_analyst",
   qa: "qa",
-  technical: "technical",
   developer: "developer",
   viewer: "viewer",
 };
@@ -32,7 +31,6 @@ const ROLES = [
   { value: "admin",            label: "Admin" },
   { value: "business_analyst", label: "BA" },
   { value: "qa",               label: "QA" },
-  { value: "technical",        label: "Technical" },
   { value: "developer",        label: "Developer" },
   { value: "viewer",           label: "Viewer" },
 ];
@@ -41,7 +39,6 @@ const ROLE_COLORS: Record<string, string> = {
   admin:            "bg-violet-100 text-violet-700",
   business_analyst: "bg-blue-100 text-blue-700",
   qa:               "bg-amber-100 text-amber-700",
-  technical:        "bg-teal-100 text-teal-700",
   developer:        "bg-green-100 text-green-700",
   viewer:           "bg-slate-100 text-slate-600",
 };
@@ -58,6 +55,14 @@ const loadError = ref<string | null>(null);
 const adding = ref(false);
 const editingRoleId = ref<number | null>(null);
 const editingRole = ref("");
+
+// Pagination & search
+const memberQ = ref("");
+const memberPage = ref(1);
+const memberLimit = 15;
+const memberTotal = ref(0);
+const memberTotalPages = ref(1);
+let memberSearchTimer: ReturnType<typeof setTimeout> | null = null;
 
 // Add member form state
 const searchQ = ref("");
@@ -104,11 +109,28 @@ onBeforeUnmount(() => document.removeEventListener("mousedown", onClickOutside))
 
 async function loadMembers() {
   try {
-    const res = await listRtmfProjectMembers(projectId);
+    const params = new URLSearchParams({ page: String(memberPage.value), limit: String(memberLimit) });
+    if (memberQ.value.trim()) params.set("q", memberQ.value.trim());
+    const res = await listRtmfProjectMembers(projectId, `?${params}`);
     members.value = res.data;
+    memberTotal.value = res.meta?.total ?? 0;
+    memberTotalPages.value = res.meta?.totalPages ?? 1;
   } catch {
     toast.error("Failed to load members");
   }
+}
+
+function onMemberSearch() {
+  if (memberSearchTimer) clearTimeout(memberSearchTimer);
+  memberSearchTimer = setTimeout(() => {
+    memberPage.value = 1;
+    loadMembers();
+  }, 300);
+}
+
+function goToPage(p: number) {
+  memberPage.value = p;
+  loadMembers();
 }
 
 async function loadCandidates() {
@@ -137,6 +159,7 @@ async function confirmAdd() {
   adding.value = true;
   try {
     await addRtmfProjectMember(projectId, { userId: user.id, projectRole: addRole.value });
+    memberPage.value = 1;
     await Promise.all([loadMembers(), loadCandidates()]);
 
     toast.success(`${user.name} added as ${roleLabelFor(addRole.value)}`);
@@ -175,7 +198,8 @@ async function remove(member: RtmfProjectMember) {
   if (!accepted) return;
   try {
     await removeRtmfProjectMember(projectId, member.id);
-    members.value = members.value.filter((m) => m.id !== member.id);
+    if (members.value.length === 1 && memberPage.value > 1) memberPage.value -= 1;
+    await Promise.all([loadMembers(), loadCandidates()]);
     toast.success(`${member.name} removed`);
   } catch {
     toast.error("Failed to remove member");
@@ -309,7 +333,17 @@ function roleColorFor(value: string) {
         <div class="flex items-center gap-2 border-b border-slate-100 px-4 py-2.5">
           <Users class="h-4 w-4 text-violet-600" />
           <h2 class="text-sm font-semibold text-slate-900">Current Members</h2>
-          <span class="ml-1 text-xs text-slate-500">{{ members.length }}</span>
+          <span class="ml-1 text-xs text-slate-500">{{ memberTotal }}</span>
+          <div class="relative ml-auto">
+            <Search class="absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-slate-400 pointer-events-none" />
+            <input
+              v-model="memberQ"
+              type="text"
+              placeholder="Search members…"
+              class="w-48 rounded-lg border border-slate-200 py-1 pl-8 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-violet-400"
+              @input="onMemberSearch"
+            />
+          </div>
         </div>
         <ul class="divide-y divide-slate-100">
           <li v-for="m in members" :key="m.id" class="flex items-center gap-3 px-4 py-2.5">
@@ -353,8 +387,35 @@ function roleColorFor(value: string) {
               </button>
             </template>
           </li>
-          <li v-if="members.length === 0" class="px-4 py-6 text-center text-sm text-slate-400">No members yet.</li>
+          <li v-if="members.length === 0" class="px-4 py-6 text-center text-sm text-slate-400">No members found.</li>
         </ul>
+
+        <!-- Pagination -->
+        <div v-if="memberTotalPages > 1" class="flex items-center justify-between border-t border-slate-100 px-4 py-2.5">
+          <span class="text-xs text-slate-500">
+            Page {{ memberPage }} of {{ memberTotalPages }} · {{ memberTotal }} members
+          </span>
+          <div class="flex items-center gap-1">
+            <button
+              :disabled="memberPage <= 1"
+              class="rounded px-2 py-1 text-xs text-slate-500 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
+              @click="goToPage(memberPage - 1)"
+            >← Prev</button>
+            <template v-for="p in memberTotalPages" :key="p">
+              <button
+                v-if="memberTotalPages <= 7 || Math.abs(p - memberPage) <= 2 || p === 1 || p === memberTotalPages"
+                :class="['min-w-[1.75rem] rounded px-2 py-1 text-xs', p === memberPage ? 'bg-violet-600 text-white' : 'text-slate-600 hover:bg-slate-100']"
+                @click="goToPage(p)"
+              >{{ p }}</button>
+              <span v-else-if="p === memberPage - 3 || p === memberPage + 3" class="px-1 text-xs text-slate-400">…</span>
+            </template>
+            <button
+              :disabled="memberPage >= memberTotalPages"
+              class="rounded px-2 py-1 text-xs text-slate-500 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
+              @click="goToPage(memberPage + 1)"
+            >Next →</button>
+          </div>
+        </div>
       </article>
     </div>
   </AdminLayout>

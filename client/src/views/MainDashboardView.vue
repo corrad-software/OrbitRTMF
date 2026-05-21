@@ -1,12 +1,10 @@
 <script setup lang="ts">
 import { onMounted, ref } from "vue";
-import { useRouter } from "vue-router";
 import { FolderKanban, ArrowRight, Users } from "lucide-vue-next";
 import AdminLayout from "@/layouts/AdminLayout.vue";
 import { listRtmfProjects } from "@/api/rtmf";
 import type { RtmfProject } from "@/types";
 
-const router = useRouter();
 const projects = ref<RtmfProject[]>([]);
 const loading = ref(true);
 
@@ -14,7 +12,6 @@ const ROLE_LABELS: Record<string, string> = {
   admin:            "Admin",
   business_analyst: "Business Analyst",
   qa:               "QA",
-  technical:        "Technical",
   developer:        "Developer",
   viewer:           "Viewer",
 };
@@ -23,7 +20,6 @@ const ROLE_COLORS: Record<string, string> = {
   admin:            "bg-violet-100 text-violet-700",
   business_analyst: "bg-blue-100 text-blue-700",
   qa:               "bg-amber-100 text-amber-700",
-  technical:        "bg-cyan-100 text-cyan-700",
   developer:        "bg-emerald-100 text-emerald-700",
   viewer:           "bg-slate-100 text-slate-600",
 };
@@ -38,10 +34,6 @@ onMounted(async () => {
   try {
     const res = await listRtmfProjects();
     projects.value = res.data;
-    if (res.data.length === 1) {
-      enterProject(res.data[0]);
-      return;
-    }
   } finally {
     loading.value = false;
   }
@@ -50,7 +42,7 @@ onMounted(async () => {
 
 <template>
   <AdminLayout>
-    <div class="mx-auto max-w-5xl space-y-6">
+    <div class="mx-auto max-w-7xl space-y-6">
 
       <div>
         <h1 class="page-title">My Task</h1>

@@ -397,8 +397,8 @@ export async function deleteRtmfProject(id: number) {
   return apiRequest<{ data: { success: boolean } }>(`/api/rtmf-projects/${id}`, { method: "DELETE" });
 }
 
-export async function listRtmfProjectMembers(projectId: number) {
-  return apiRequest<{ data: RtmfProjectMember[] }>(`/api/rtmf-projects/${projectId}/members`);
+export async function listRtmfProjectMembers(projectId: number, params = "") {
+  return apiRequest<{ data: RtmfProjectMember[]; meta: Record<string, number> }>(`/api/rtmf-projects/${projectId}/members${params}`);
 }
 
 export async function listRtmfProjectCandidates(projectId: number, q?: string) {

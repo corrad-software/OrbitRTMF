@@ -178,13 +178,11 @@ export type RtmfDashboardSummary = {
   byReview: {
     businessAnalyst: RtmfReviewRoleStat;
     qa: RtmfReviewRoleStat;
-    technical: RtmfReviewRoleStat;
     developer: RtmfReviewRoleStat;
   };
   byRoleModule: {
     businessAnalyst: RtmfRoleModuleStat[];
     qa: RtmfRoleModuleStat[];
-    technical: RtmfRoleModuleStat[];
     developer: RtmfRoleModuleStat[];
   };
 };
@@ -343,7 +341,7 @@ export type RtmfProjectMember = {
   photoUrl?: string | null;
 };
 
-export type RtmfFrontendFeedbackRole = 'business_analyst' | 'qa' | 'technical' | 'developer';
+export type RtmfFrontendFeedbackRole = 'business_analyst' | 'qa' | 'developer';
 export type RtmfFrontendFeedbackStatus = 'open' | 'reviewed' | 'approved';
 
 export type RtmfFrontendFeedback = {
@@ -398,6 +396,7 @@ export type MemberCandidate = {
   name: string;
   email: string;
   role: string;
+  photoUrl?: string | null;
 };
 
 export type PostInput = {

@@ -293,9 +293,12 @@ router.beforeEach(async (to) => {
 
   if (auth.isAuthenticated && !auth.isAdmin) {
     // Block admin-only sections for non-admin users
+    // Project-scoped routes (/admin/rtmf/projects/:numericId/...) are allowed;
+    // only the flat management path (/admin/rtmf/projects without a numeric ID) is admin-only.
+    const isProjectScoped = /^\/admin\/rtmf\/projects\/\d+\//.test(to.path);
+
     const adminOnlyPrefixes = [
       "/admin/platform/",
-      "/admin/rtmf/projects",   // Setup — projects list/management
       "/admin/tools/",
       "/admin/administration/",
       "/admin/settings",
@@ -306,7 +309,8 @@ router.beforeEach(async (to) => {
       "/admin/menus",
       "/admin/webfront",
     ];
-    if (adminOnlyPrefixes.some((p) => to.path.startsWith(p))) {
+    const isAdminRtmfManagement = !isProjectScoped && to.path.startsWith("/admin/rtmf/projects");
+    if (isAdminRtmfManagement || adminOnlyPrefixes.some((p) => to.path.startsWith(p))) {
       return { name: "main-dashboard" };
     }
 

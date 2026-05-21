@@ -249,6 +249,51 @@ onMounted(async () => {
           </div>
         </div>
 
+        <!-- Legend -->
+        <div class="flex flex-wrap items-center justify-end gap-x-4 gap-y-1 rounded-lg border border-slate-100 bg-slate-50 p-[10px] text-xs text-slate-400">
+          <span class="font-medium text-slate-500">Review:</span>
+          <span class="flex items-center gap-1"><span class="font-medium text-violet-500">BA</span> Business Analyst</span>
+          <span class="flex items-center gap-1"><span class="font-medium text-sky-500">QA</span> Quality Assurance</span>
+          <span class="flex items-center gap-1"><span class="font-medium text-green-600">DV</span> Developer</span>
+          <span class="mx-1 text-slate-200">|</span>
+          <span class="flex items-center gap-1">
+            <div class="group relative" style="z-index: 10">
+              <span class="inline-flex h-[18px] w-[18px] items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+                <svg viewBox="0 0 12 12" class="h-3 w-3" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3" /></svg>
+              </span>
+              <div class="pointer-events-none absolute bottom-full left-1/2 mb-1.5 -translate-x-1/2 whitespace-nowrap rounded bg-slate-800 px-2 py-1 text-[11px] text-white opacity-0 transition-opacity group-hover:opacity-100">
+                All reviews approved
+                <div class="absolute left-1/2 top-full -translate-x-1/2 border-4 border-transparent border-t-slate-800"></div>
+              </div>
+            </div>
+            Closed
+          </span>
+          <span class="flex items-center gap-1">
+            <div class="group relative" style="z-index: 10">
+              <span class="inline-flex h-[18px] w-[18px] items-center justify-center rounded-full bg-amber-100 text-amber-600">
+                <svg viewBox="0 0 12 12" class="h-3 w-3" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3" /></svg>
+              </span>
+              <div class="pointer-events-none absolute bottom-full left-1/2 mb-1.5 -translate-x-1/2 whitespace-nowrap rounded bg-slate-800 px-2 py-1 text-[11px] text-white opacity-0 transition-opacity group-hover:opacity-100">
+                Review in progress
+                <div class="absolute left-1/2 top-full -translate-x-1/2 border-4 border-transparent border-t-slate-800"></div>
+              </div>
+            </div>
+            In Progress
+          </span>
+          <span class="flex items-center gap-1">
+            <div class="group relative" style="z-index: 10">
+              <span class="inline-flex h-[18px] w-[18px] items-center justify-center rounded-full bg-slate-100 text-slate-300">
+                <svg viewBox="0 0 12 12" class="h-3 w-3" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="3" x2="6" y2="9" /><line x1="3" y1="6" x2="9" y2="6" /></svg>
+              </span>
+              <div class="pointer-events-none absolute bottom-full left-1/2 mb-1.5 -translate-x-1/2 whitespace-nowrap rounded bg-slate-800 px-2 py-1 text-[11px] text-white opacity-0 transition-opacity group-hover:opacity-100">
+                Not yet reviewed
+                <div class="absolute left-1/2 top-full -translate-x-1/2 border-4 border-transparent border-t-slate-800"></div>
+              </div>
+            </div>
+            Open
+          </span>
+        </div>
+
         <!-- Table -->
         <div class="table-container">
           <table class="w-full text-sm">
@@ -257,15 +302,14 @@ onMounted(async () => {
                 <th class="whitespace-nowrap px-3 py-2 text-xs font-semibold uppercase tracking-wider text-slate-500">Page ID</th>
                 <th class="whitespace-nowrap px-3 py-2 text-xs font-semibold uppercase tracking-wider text-slate-500">Title</th>
                 <th class="whitespace-nowrap px-3 py-2 text-xs font-semibold uppercase tracking-wider text-slate-500">Module / Sub-module</th>
-                <th class="whitespace-nowrap px-2 py-2 text-center text-xs font-semibold uppercase tracking-wider text-slate-500">Done</th>
                 <th class="whitespace-nowrap px-2 py-2 text-center text-xs font-semibold uppercase tracking-wider text-slate-500">
                   <div class="flex items-center justify-center gap-1.5">
                     <span class="flex h-4 w-4 items-center justify-center text-violet-500">BA</span>
                     <span class="flex h-4 w-4 items-center justify-center text-sky-500">QA</span>
-                    <span class="flex h-4 w-4 items-center justify-center text-amber-500">TC</span>
                     <span class="flex h-4 w-4 items-center justify-center text-green-600">DV</span>
                   </div>
                 </th>
+                <th class="whitespace-nowrap px-2 py-2 text-center text-xs font-semibold uppercase tracking-wider text-slate-500">Done</th>
                 <th class="whitespace-nowrap px-2 py-2 text-center text-xs font-semibold uppercase tracking-wider text-slate-500">Assigned</th>
                 <th class="w-8 px-2 py-2"></th>
               </tr>
@@ -288,38 +332,46 @@ onMounted(async () => {
                   {{ item.module?.code }}{{ item.subModule ? ' > ' + item.subModule.code : '' }}
                 </td>
 
+                <!-- Reviews: BA · QA · Dev -->
+                <td class="whitespace-nowrap px-2 py-2 text-center" @click.stop>
+                  <div class="flex items-center justify-center gap-1.5">
+                    <div
+                      v-for="role in (['business_analyst', 'qa', 'developer'] as const)"
+                      :key="role"
+                      class="group relative"
+                    >
+                      <span
+                        class="inline-flex h-[18px] w-[18px] items-center justify-center rounded-full"
+                        :class="{
+                          'bg-emerald-100 text-emerald-600': item.feedbacks?.find(f => f.role === role)?.status === 'approved',
+                          'bg-amber-100 text-amber-600':     item.feedbacks?.find(f => f.role === role)?.status === 'reviewed',
+                          'bg-slate-100 text-slate-300':     !item.feedbacks?.find(f => f.role === role) || item.feedbacks?.find(f => f.role === role)?.status === 'open',
+                        }"
+                      >
+                        <svg v-if="item.feedbacks?.find(f => f.role === role)?.status === 'approved'" viewBox="0 0 12 12" class="h-3 w-3" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3" /></svg>
+                        <svg v-else-if="item.feedbacks?.find(f => f.role === role)?.status === 'reviewed'" viewBox="0 0 12 12" class="h-3 w-3" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3" /></svg>
+                        <svg v-else viewBox="0 0 12 12" class="h-3 w-3" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="3" x2="6" y2="9" /><line x1="3" y1="6" x2="9" y2="6" /></svg>
+                      </span>
+                      <div class="pointer-events-none absolute bottom-full left-1/2 mb-1.5 -translate-x-1/2 whitespace-nowrap rounded bg-slate-800 px-2 py-1 text-[11px] text-white opacity-0 transition-opacity group-hover:opacity-100">
+                        {{ role === 'business_analyst' ? 'BA' : role === 'qa' ? 'QA' : 'Dev' }}:
+                        {{ { open: 'Open', reviewed: 'In Progress', approved: 'Closed' }[item.feedbacks?.find(f => f.role === role)?.status ?? 'open'] ?? 'Open' }}
+                        <div class="absolute left-1/2 top-full -translate-x-1/2 border-4 border-transparent border-t-slate-800"></div>
+                      </div>
+                    </div>
+                  </div>
+                </td>
+
                 <!-- Done -->
                 <td class="whitespace-nowrap px-3 py-2 text-center" @click.stop>
                   <span
                     :title="item.isDone ? 'Done' : 'Not done'"
-                    class="inline-flex h-4 w-4 items-center justify-center rounded-full"
+                    class="inline-flex h-[18px] w-[18px] items-center justify-center rounded-full"
                     :class="item.isDone ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-300'"
                   >
-                    <svg viewBox="0 0 12 12" class="h-2.5 w-2.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <svg viewBox="0 0 12 12" class="h-3 w-3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                       <polyline points="2,6 5,9 10,3" />
                     </svg>
                   </span>
-                </td>
-
-                <!-- Reviews: BA · QA · Tech · Dev -->
-                <td class="whitespace-nowrap px-2 py-2 text-center" @click.stop>
-                  <div class="flex items-center justify-center gap-1.5">
-                    <span
-                      v-for="role in (['business_analyst', 'qa', 'technical', 'developer'] as const)"
-                      :key="role"
-                      :title="`${role === 'business_analyst' ? 'BA' : role === 'qa' ? 'QA' : role === 'technical' ? 'Tech' : 'Dev'}: ${{ open: 'Open', reviewed: 'In Progress', approved: 'Closed' }[item.feedbacks?.find(f => f.role === role)?.status ?? 'open'] ?? 'Open'}`"
-                      class="inline-flex h-4 w-4 items-center justify-center rounded-full"
-                      :class="{
-                        'bg-emerald-100 text-emerald-600': item.feedbacks?.find(f => f.role === role)?.status === 'approved',
-                        'bg-amber-100 text-amber-600':     item.feedbacks?.find(f => f.role === role)?.status === 'reviewed',
-                        'bg-slate-100 text-slate-300':     !item.feedbacks?.find(f => f.role === role) || item.feedbacks?.find(f => f.role === role)?.status === 'open',
-                      }"
-                    >
-                      <svg v-if="item.feedbacks?.find(f => f.role === role)?.status === 'approved'" viewBox="0 0 12 12" class="h-2 w-2" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="2,6 5,9 10,3" /></svg>
-                      <svg v-else-if="item.feedbacks?.find(f => f.role === role)?.status === 'reviewed'" viewBox="0 0 12 12" class="h-2 w-2" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="6" r="3" /></svg>
-                      <svg v-else viewBox="0 0 12 12" class="h-2 w-2" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="3" x2="6" y2="9" /><line x1="3" y1="6" x2="9" y2="6" /></svg>
-                    </span>
-                  </div>
                 </td>
 
                 <!-- Assignees -->

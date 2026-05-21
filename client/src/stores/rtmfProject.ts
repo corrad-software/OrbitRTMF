@@ -26,7 +26,7 @@ export const useRtmfProjectStore = defineStore("rtmfProject", {
       if (!role) return [];
       if (role === "admin" || role === "business_analyst")
         return ["rtmf.catalog", "rtmf.tools", "rtmf.tracker", "rtmf.feedback"];
-      if (role === "qa" || role === "technical" || role === "developer")
+      if (role === "qa" || role === "developer")
         return ["rtmf.catalog", "rtmf.tracker", "rtmf.feedback"];
       if (role === "viewer")
         return ["rtmf.tracker"];

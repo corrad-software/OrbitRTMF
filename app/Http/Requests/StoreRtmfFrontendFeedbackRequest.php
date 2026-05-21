@@ -12,7 +12,7 @@ class StoreRtmfFrontendFeedbackRequest extends BaseFormRequest
     public function rules(): array
     {
         return [
-            'role'       => 'required|in:business_analyst,qa,technical',
+            'role'       => 'required|in:business_analyst,qa,developer',
             'is_checked' => 'nullable|boolean',
             'comment'    => 'nullable|string',
         ];

@@ -115,14 +115,6 @@ class RtmfProjectRoleTest extends TestCase
         $this->assertFalse($user->canEditRtmfProject($this->project->id));
     }
 
-    public function test_technical_cannot_edit(): void
-    {
-        $user = $this->makeUser('tech');
-        $this->addProjectMember($user, 'technical');
-
-        $this->assertFalse($user->canEditRtmfProject($this->project->id));
-    }
-
     public function test_viewer_cannot_edit(): void
     {
         $user = $this->makeUser('viewer');
