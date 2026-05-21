@@ -60,9 +60,8 @@ const reviewRoles = computed(() => {
   if (!r) return [];
   return [
     { key: 'businessAnalyst', label: 'Business Analyst', icon: ClipboardCheck, color: 'violet', stat: r.businessAnalyst },
-    { key: 'qa',               label: 'QA',               icon: FlaskConical,   color: 'sky',    stat: r.qa },
-    { key: 'technical',        label: 'Technical',        icon: Wrench,         color: 'amber',  stat: r.technical },
-    { key: 'developer',        label: 'Developer',        icon: Code2,          color: 'green',  stat: r.developer },
+    { key: 'qa',              label: 'QA',               icon: FlaskConical,   color: 'sky',    stat: r.qa },
+    { key: 'developer',       label: 'Developer',        icon: Code2,          color: 'green',  stat: r.developer },
   ].map(role => ({
     ...role,
     total,

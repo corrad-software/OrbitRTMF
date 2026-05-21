@@ -16,7 +16,7 @@ class TrackingController extends Controller
 {
     use ApiResponse;
 
-    private const ROLES = ['business_analyst', 'qa', 'technical', 'developer'];
+    private const ROLES = ['business_analyst', 'qa', 'developer'];
 
     public function overview(Request $request): JsonResponse
     {
@@ -251,7 +251,6 @@ class TrackingController extends Controller
                 $reviewMap[match($role) {
                     'business_analyst' => 'ba',
                     'qa'               => 'qa',
-                    'technical'        => 'tech',
                     'developer'        => 'dev',
                 }] = $row->feedbacks->firstWhere('role', $role)?->status ?? null;
             }

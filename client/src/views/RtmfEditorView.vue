@@ -6,6 +6,7 @@ import { Cable, Paperclip, Trash2, LayoutGrid, Save, Upload, X, Plus, TablePrope
 import AdminLayout from "@/layouts/AdminLayout.vue";
 import RichTextEditor from "@/components/RichTextEditor.vue";
 import MediaPickerModal from "@/components/MediaPickerModal.vue";
+import RtmfItemImportModal from "@/components/RtmfItemImportModal.vue";
 import {
   createRtmfFrontend,
   deleteRtmfFrontend,
@@ -56,9 +57,10 @@ const vAutoResize = {
       el.style.height = next + 'px';
       el.style.overflowY = el.scrollHeight > MAX ? 'auto' : 'hidden';
     };
-    // defer so the browser has laid out the element and scrollHeight is accurate
-    setTimeout(resize, 0);
+    // double rAF: wait for two paint frames so table layout is fully settled
+    requestAnimationFrame(() => requestAnimationFrame(resize));
     el.addEventListener('input', resize);
+    el.addEventListener('focus', resize);
   },
   updated(el: HTMLTextAreaElement) {
     const MIN = 56;
@@ -436,6 +438,14 @@ async function addItem() {
   initConditionLines(res.data);
 }
 
+function onItemsImported(imported: RtmfFrontendItem[]) {
+  imported.forEach(item => {
+    items.value.push(item);
+    initConditionLines(item);
+  });
+  showImportModal.value = false;
+}
+
 async function saveItem(item: RtmfFrontendItem) {
   const condition = isActionType(item.type)
     ? serializeConditionLines(item.id)
@@ -592,7 +602,6 @@ const feedbacks = ref<RtmfFrontendFeedback[]>([]);
 const FEEDBACK_ROLES = [
   { key: 'business_analyst' as const, label: 'Business Analyst' },
   { key: 'qa' as const,               label: 'QA' },
-  { key: 'technical' as const,        label: 'Technical' },
   { key: 'developer' as const,        label: 'Developer' },
 ];
 
@@ -719,6 +728,7 @@ async function removeMockup() {
 }
 
 const showLibraryPicker = ref(false);
+const showImportModal = ref(false);
 
 async function pickFromLibrary(item: import("@/types").AllAttachment) {
   showLibraryPicker.value = false;
@@ -1369,7 +1379,7 @@ onMounted(async () => {
                   v-model="item.condition"
                   @blur="projectStore.canEdit && saveItem(item)"
                   class="w-full resize-none rounded-lg border border-slate-200 px-2.5 py-1.5 text-sm text-slate-700 shadow-sm focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100"
-                  style="min-height: 3.5rem; height: 3.5rem"
+                  style="min-height: 3.5rem"
                   placeholder="e.g. status ≠ DRAF"
                 />
                 <!-- Action: condition inputs, one per pair -->
@@ -1398,7 +1408,7 @@ onMounted(async () => {
                   v-model="item.validation"
                   @blur="projectStore.canEdit && saveItem(item)"
                   class="w-full resize-none rounded-lg border border-slate-200 px-2.5 py-1.5 text-sm text-slate-700 shadow-sm focus:border-violet-400 focus:outline-none focus:ring-2 focus:ring-violet-100"
-                  style="min-height: 3.5rem; height: 3.5rem"
+                  style="min-height: 3.5rem"
                   placeholder="e.g. Max 255, Email"
                 />
                 <!-- Action: page picker per pair, aligned to condition rows -->
@@ -1466,13 +1476,20 @@ onMounted(async () => {
             </div>
           </div><!-- end overflow-x-auto -->
 
-          <div v-if="projectStore.canEdit" class="border-t border-slate-100 px-5 py-3">
+          <div v-if="projectStore.canEdit" class="flex items-center gap-2 border-t border-slate-100 px-5 py-3">
             <button
               @click="addItem"
               class="flex items-center gap-2 rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-600 shadow-sm transition-colors hover:bg-slate-50"
             >
               <Plus class="h-4 w-4" />
               Add Item
+            </button>
+            <button
+              @click="showImportModal = true"
+              class="flex items-center gap-2 rounded-lg border border-violet-300 bg-white px-4 py-2 text-sm font-medium text-violet-600 shadow-sm transition-colors hover:bg-violet-50"
+            >
+              <Upload class="h-4 w-4" />
+              Import XLS
             </button>
           </div>
         </article>
@@ -1877,6 +1894,14 @@ onMounted(async () => {
     @upload="uploadFromPicker"
     @select="pickFromLibrary"
     @close="showLibraryPicker = false"
+  />
+
+  <RtmfItemImportModal
+    v-if="showImportModal"
+    :frontendId="id"
+    :existingCount="items.length"
+    @close="showImportModal = false"
+    @imported="onItemsImported"
   />
 
 </template>

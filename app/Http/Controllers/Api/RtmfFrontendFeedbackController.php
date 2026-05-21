@@ -21,7 +21,7 @@ class RtmfFrontendFeedbackController extends Controller
         }
 
         $feedbacks = RtmfFrontendFeedback::where('rtmf_frontend_id', $frontendId)
-            ->orderByRaw("CASE role WHEN 'business_analyst' THEN 0 WHEN 'qa' THEN 1 WHEN 'technical' THEN 2 WHEN 'developer' THEN 3 ELSE 4 END")
+            ->orderByRaw("CASE role WHEN 'business_analyst' THEN 0 WHEN 'qa' THEN 1 WHEN 'developer' THEN 2 ELSE 3 END")
             ->get();
 
         return $this->sendOk($feedbacks);
@@ -34,7 +34,7 @@ class RtmfFrontendFeedbackController extends Controller
             return $this->sendError(404, 'NOT_FOUND', 'Frontend not found');
         }
 
-        if (! in_array($role, ['business_analyst', 'qa', 'technical', 'developer'])) {
+        if (! in_array($role, ['business_analyst', 'qa', 'developer'])) {
             return $this->sendError(422, 'VALIDATION_ERROR', 'Invalid role');
         }
 

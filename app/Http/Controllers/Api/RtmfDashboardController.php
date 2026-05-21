@@ -123,7 +123,7 @@ class RtmfDashboardController extends Controller
         ]);
 
         // ── Feedback breakdown ───────────────────────────────────────────────
-        $roles         = ['business_analyst', 'qa', 'technical', 'developer'];
+        $roles         = ['business_analyst', 'qa', 'developer'];
         $feedbackCounts = RtmfFrontendFeedback::select('role', 'status', DB::raw('count(*) as total'))
             ->whereIn('rtmf_frontend_id', $frontendIds)
             ->groupBy('role', 'status')

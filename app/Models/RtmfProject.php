@@ -12,7 +12,7 @@ class RtmfProject extends Model
 {
     use HasFactory, Auditable;
 
-    public const MEMBER_ROLES = ['admin', 'business_analyst', 'qa', 'technical', 'developer', 'viewer'];
+    public const MEMBER_ROLES = ['admin', 'business_analyst', 'qa', 'developer', 'viewer'];
 
     protected $fillable = ['code', 'name', 'description', 'sort_order'];
 

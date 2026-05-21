@@ -84,18 +84,33 @@ class RtmfProjectController extends Controller
 
     // ── Member management ──
 
-    public function members(int $id): JsonResponse
+    public function members(Request $request, int $id): JsonResponse
     {
         $project = RtmfProject::find($id);
         if (! $project) {
             return $this->sendError(404, 'NOT_FOUND', 'Project not found');
         }
 
-        $members = DB::table('rtmf_project_users')
+        $page  = (int) $request->input('page', 1);
+        $limit = (int) $request->input('limit', 20);
+        $q     = $request->input('q');
+
+        $query = DB::table('rtmf_project_users')
             ->join('users', 'users.id', '=', 'rtmf_project_users.user_id')
             ->where('rtmf_project_users.project_id', $id)
-            ->orderBy('users.name')
-            ->select('users.id', 'users.name', 'users.email', 'users.role', 'users.photo_url', 'rtmf_project_users.role as project_role')
+            ->select('users.id', 'users.name', 'users.email', 'users.role', 'users.photo_url', 'rtmf_project_users.role as project_role');
+
+        if ($q) {
+            $query->where(function ($b) use ($q) {
+                $b->where('users.name', 'ilike', "%{$q}%")
+                  ->orWhere('users.email', 'ilike', "%{$q}%");
+            });
+        }
+
+        $total   = $query->count();
+        $members = $query->orderBy('users.name')
+            ->skip(($page - 1) * $limit)
+            ->take($limit)
             ->get();
 
         // Fetch avatars from external identity provider keyed by email
@@ -117,7 +132,12 @@ class RtmfProjectController extends Controller
                 ?? ($m->photo_url ? url($m->photo_url) : null),
         ]));
 
-        return $this->sendOk($result);
+        return $this->sendOk($result, [
+            'page'       => $page,
+            'limit'      => $limit,
+            'total'      => $total,
+            'totalPages' => (int) ceil($total / $limit),
+        ]);
     }
 
     public function addMember(StoreRtmfProjectMemberRequest $request, int $id): JsonResponse

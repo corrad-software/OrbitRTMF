@@ -75,7 +75,7 @@ class Permission
     // RTMF — can see the Project Tracker section (all RTMF roles including Viewer)
     const RTMF_TRACKER = 'rtmf.tracker';
 
-    // RTMF — can write feedback entries (BA, QA, Technical, Developer, Admin)
+    // RTMF — can write feedback entries (BA, QA, Developer, Admin)
     const RTMF_FEEDBACK = 'rtmf.feedback';
 
     public static function all(): array

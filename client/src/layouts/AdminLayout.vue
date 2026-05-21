@@ -107,7 +107,6 @@ const PROJECT_ROLE_LABELS: Record<string, string> = {
   admin:            "Admin",
   business_analyst: "BA",
   qa:               "QA",
-  technical:        "Technical",
   developer:        "Developer",
   viewer:           "Viewer",
 };

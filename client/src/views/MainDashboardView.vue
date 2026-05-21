@@ -12,7 +12,6 @@ const ROLE_LABELS: Record<string, string> = {
   admin:            "Admin",
   business_analyst: "Business Analyst",
   qa:               "QA",
-  technical:        "Technical",
   developer:        "Developer",
   viewer:           "Viewer",
 };
@@ -21,7 +20,6 @@ const ROLE_COLORS: Record<string, string> = {
   admin:            "bg-violet-100 text-violet-700",
   business_analyst: "bg-blue-100 text-blue-700",
   qa:               "bg-amber-100 text-amber-700",
-  technical:        "bg-cyan-100 text-cyan-700",
   developer:        "bg-emerald-100 text-emerald-700",
   viewer:           "bg-slate-100 text-slate-600",
 };
