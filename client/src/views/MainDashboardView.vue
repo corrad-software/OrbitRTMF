@@ -44,7 +44,7 @@ onMounted(async () => {
 
 <template>
   <AdminLayout>
-    <div class="mx-auto max-w-5xl space-y-6">
+    <div class="mx-auto max-w-7xl space-y-6">
 
       <div>
         <h1 class="page-title">My Task</h1>
