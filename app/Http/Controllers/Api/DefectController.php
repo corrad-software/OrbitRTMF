@@ -39,12 +39,21 @@ class DefectController extends Controller
         90 => 'suspended',
     ];
 
-    // Exact category IDs matching QA filter (Defect / SFT / UI-UX / With IT for Review)
-    private const QA_CATEGORY_IDS = [
+    // External category IDs (no "(Internal)" in name)
+    private const EXTERNAL_CATEGORY_IDS = [
         2,  // Pre-UAT1 - Defect
         4,  // Pre-UAT2 - Defect
         6,  // Pre-UAT3 - Defect
         57, // SIT1 - Defect
+        3,  // UAT1 - Defect
+        5,  // UAT2 - Defect
+        7,  // UAT3 - Defect
+        59, // With IT for Review 1 - Defect
+        60, // With IT for Review 2
+    ];
+
+    // Internal category IDs (categories with "(Internal)" in name)
+    private const INTERNAL_CATEGORY_IDS = [
         8,  // System Functional Testing (Internal) for Pre-UAT1
         18, // System Functional Testing (Internal) for Pre-UAT2
         43, // System Functional Testing (Internal) for Pre-UAT3
@@ -52,9 +61,6 @@ class DefectController extends Controller
         19, // System Functional Testing (Internal) for UAT1
         20, // System Functional Testing (Internal) for UAT2
         44, // System Functional Testing (Internal) for UAT3
-        3,  // UAT1 - Defect
-        5,  // UAT2 - Defect
-        7,  // UAT3 - Defect
         13, // UI/UX Testing (Internal) for Pre-UAT1
         21, // UI/UX Testing (Internal) for Pre-UAT2
         49, // UI/UX Testing (Internal) for Pre-UAT3
@@ -62,13 +68,27 @@ class DefectController extends Controller
         22, // UI/UX Testing (Internal) for UAT1
         23, // UI/UX Testing (Internal) for UAT2
         50, // UI/UX Testing (Internal) for UAT3
-        59, // With IT for Review 1 - Defect
-        60, // With IT for Review 2
+    ];
+
+    // All QA category IDs (External + Internal)
+    private const QA_CATEGORY_IDS = [
+        2, 4, 6, 57, 3, 5, 7, 59, 60,
+        8, 18, 43, 53, 19, 20, 44,
+        13, 21, 49, 55, 22, 23, 50,
     ];
 
     private function db()
     {
         return DB::connection('mantis');
+    }
+
+    private function sourceCategoryIds(string $source): array
+    {
+        return match ($source) {
+            'internal' => self::INTERNAL_CATEGORY_IDS,
+            'external' => self::EXTERNAL_CATEGORY_IDS,
+            default    => self::QA_CATEGORY_IDS,
+        };
     }
 
     private function mapSeverity(int $sev): string
@@ -87,55 +107,56 @@ class DefectController extends Controller
     }
 
     /** Base bug query with QA filter: correct categories + status != closed */
-    private function qaBugs()
+    private function qaBugs(?array $categoryIds = null)
     {
         return $this->db()->table('mantis_bug_table')
-            ->whereIn('category_id', self::QA_CATEGORY_IDS)
+            ->whereIn('category_id', $categoryIds ?? self::QA_CATEGORY_IDS)
             ->where('status', '!=', self::STATUS_CLOSED);
     }
 
-    public function dashboard(): JsonResponse
+    public function dashboard(Request $request): JsonResponse
     {
+        $catIds = $this->sourceCategoryIds($request->input('source', 'all'));
         $db = $this->db();
         $todayStart = $this->startOfTodayTs();
 
-        $newToday = (int) $this->qaBugs()
+        $newToday = (int) $this->qaBugs($catIds)
             ->where('date_submitted', '>=', $todayStart)->count();
 
         $resolvedToday = (int) $db->table('mantis_bug_history_table as h')
             ->join('mantis_bug_table as b', 'b.id', '=', 'h.bug_id')
-            ->whereIn('b.category_id', self::QA_CATEGORY_IDS)
+            ->whereIn('b.category_id', $catIds)
             ->where('h.field_name', 'status')
             ->where('h.new_value', (string) self::STATUS_RESOLVED)
             ->where('h.date_modified', '>=', $todayStart)->count();
 
         $reopenedToday = (int) $db->table('mantis_bug_history_table as h')
             ->join('mantis_bug_table as b', 'b.id', '=', 'h.bug_id')
-            ->whereIn('b.category_id', self::QA_CATEGORY_IDS)
+            ->whereIn('b.category_id', $catIds)
             ->where('h.field_name', 'status')
             ->whereIn('h.old_value', [(string) self::STATUS_RESOLVED, (string) self::STATUS_CLOSED])
             ->whereNotIn('h.new_value', [(string) self::STATUS_RESOLVED, (string) self::STATUS_CLOSED])
             ->where('h.date_modified', '>=', $todayStart)->count();
 
-        $kritikalOpen = (int) $this->qaBugs()
+        $kritikalOpen = (int) $this->qaBugs($catIds)
             ->whereIn('status', self::OPEN_STATUSES)
             ->where('severity', '>=', 70)->count();
 
-        $highOpen = (int) $this->qaBugs()
+        $highOpen = (int) $this->qaBugs($catIds)
             ->whereIn('status', self::OPEN_STATUSES)
             ->where('severity', 60)->count();
 
-        $feedback = (int) $this->qaBugs()
+        $feedback = (int) $this->qaBugs($catIds)
             ->where('status', self::STATUS_FEEDBACK)->count();
 
-        $totalActive = (int) $this->qaBugs()->count();
+        $totalActive = (int) $this->qaBugs($catIds)->count();
 
         $activeYesterday = $totalActive - $newToday + $resolvedToday;
 
         $newDefects = $db->table('mantis_bug_table as b')
             ->leftJoin('mantis_project_table as p', 'p.id', '=', 'b.project_id')
             ->leftJoin('mantis_user_table as u', 'u.id', '=', 'b.handler_id')
-            ->whereIn('b.category_id', self::QA_CATEGORY_IDS)
+            ->whereIn('b.category_id', $catIds)
             ->where('b.date_submitted', '>=', $todayStart)
             ->orderByDesc('b.id')->limit(20)
             ->get(['b.id', 'b.summary', 'p.name as project', 'b.severity', 'b.priority', 'u.username as assigned', 'b.date_submitted']);
@@ -144,7 +165,7 @@ class DefectController extends Controller
             ->join('mantis_bug_table as b', 'b.id', '=', 'h.bug_id')
             ->leftJoin('mantis_project_table as p', 'p.id', '=', 'b.project_id')
             ->leftJoin('mantis_user_table as u', 'u.id', '=', 'h.user_id')
-            ->whereIn('b.category_id', self::QA_CATEGORY_IDS)
+            ->whereIn('b.category_id', $catIds)
             ->where('h.field_name', 'status')
             ->where('h.new_value', (string) self::STATUS_RESOLVED)
             ->where('h.date_modified', '>=', $todayStart)
@@ -155,7 +176,7 @@ class DefectController extends Controller
             ->join('mantis_bug_table as b', 'b.id', '=', 'h.bug_id')
             ->leftJoin('mantis_project_table as p', 'p.id', '=', 'b.project_id')
             ->leftJoin('mantis_user_table as u', 'u.id', '=', 'h.user_id')
-            ->whereIn('b.category_id', self::QA_CATEGORY_IDS)
+            ->whereIn('b.category_id', $catIds)
             ->where('h.field_name', 'status')
             ->whereIn('h.old_value', [(string) self::STATUS_RESOLVED, (string) self::STATUS_CLOSED])
             ->whereNotIn('h.new_value', [(string) self::STATUS_RESOLVED, (string) self::STATUS_CLOSED])
@@ -220,12 +241,14 @@ class DefectController extends Controller
             $sortBy = 'id';
         }
 
+        $catIds = $this->sourceCategoryIds($request->input('source', 'all'));
+
         $base = $this->db()->table('mantis_bug_table as b')
             ->leftJoin('mantis_project_table as p', 'p.id', '=', 'b.project_id')
             ->leftJoin('mantis_category_table as c', 'c.id', '=', 'b.category_id')
             ->leftJoin('mantis_user_table as ur', 'ur.id', '=', 'b.reporter_id')
             ->leftJoin('mantis_user_table as uh', 'uh.id', '=', 'b.handler_id')
-            ->whereIn('b.category_id', self::QA_CATEGORY_IDS)
+            ->whereIn('b.category_id', $catIds)
             ->where('b.status', '!=', self::STATUS_CLOSED);
 
         if ($q !== '') {
@@ -297,16 +320,17 @@ class DefectController extends Controller
         ]);
     }
 
-    public function summary(): JsonResponse
+    public function summary(Request $request): JsonResponse
     {
+        $catIds = $this->sourceCategoryIds($request->input('source', 'all'));
         $db = $this->db();
 
-        $total    = (int) $this->qaBugs()->count();
-        $open     = (int) $this->qaBugs()->whereIn('status', self::OPEN_STATUSES)->count();
-        $resolved = (int) $this->qaBugs()->where('status', self::STATUS_RESOLVED)->count();
+        $total    = (int) $this->qaBugs($catIds)->count();
+        $open     = (int) $this->qaBugs($catIds)->whereIn('status', self::OPEN_STATUSES)->count();
+        $resolved = (int) $this->qaBugs($catIds)->where('status', self::STATUS_RESOLVED)->count();
         $closed   = 0; // excluded by QA filter
 
-        $bySeverity = $this->qaBugs()
+        $bySeverity = $this->qaBugs($catIds)
             ->whereIn('status', self::OPEN_STATUSES)
             ->select('severity', DB::raw('COUNT(*) as c'))
             ->groupBy('severity')->get();
@@ -318,7 +342,7 @@ class DefectController extends Controller
 
         $topAssignees = $this->db()->table('mantis_bug_table as b')
             ->leftJoin('mantis_user_table as u', 'u.id', '=', 'b.handler_id')
-            ->whereIn('b.category_id', self::QA_CATEGORY_IDS)
+            ->whereIn('b.category_id', $catIds)
             ->where('b.status', '!=', self::STATUS_CLOSED)
             ->whereIn('b.status', self::OPEN_STATUSES)
             ->where('b.handler_id', '>', 0)
@@ -329,7 +353,7 @@ class DefectController extends Controller
 
         $topModules = $this->db()->table('mantis_bug_table as b')
             ->leftJoin('mantis_project_table as p', 'p.id', '=', 'b.project_id')
-            ->whereIn('b.category_id', self::QA_CATEGORY_IDS)
+            ->whereIn('b.category_id', $catIds)
             ->whereIn('b.status', self::OPEN_STATUSES)
             ->select('p.name', DB::raw('COUNT(*) as open_count'))
             ->groupBy('p.name')
@@ -357,11 +381,12 @@ class DefectController extends Controller
         ]);
     }
 
-    public function categories(): JsonResponse
+    public function categories(Request $request): JsonResponse
     {
+        $catIds = $this->sourceCategoryIds($request->input('source', 'all'));
         $rows = $this->db()->table('mantis_bug_table as b')
             ->leftJoin('mantis_category_table as c', 'c.id', '=', 'b.category_id')
-            ->whereIn('b.category_id', self::QA_CATEGORY_IDS)
+            ->whereIn('b.category_id', $catIds)
             ->where('b.status', '!=', self::STATUS_CLOSED)
             ->select(
                 'c.name',
@@ -394,11 +419,12 @@ class DefectController extends Controller
 
     public function trend(Request $request): JsonResponse
     {
+        $catIds = $this->sourceCategoryIds($request->input('source', 'all'));
         $days = max(3, min(60, (int) $request->input('days', 14)));
         $db   = $this->db();
         $today = strtotime('today 00:00:00');
 
-        $bakiNow = (int) $this->qaBugs()->count();
+        $bakiNow = (int) $this->qaBugs($catIds)->count();
 
         $dailyStats = [];
         for ($i = $days - 1; $i >= 0; $i--) {
@@ -406,19 +432,19 @@ class DefectController extends Controller
             $end   = $start + 86400;
 
             $baru = (int) $db->table('mantis_bug_table')
-                ->whereIn('category_id', self::QA_CATEGORY_IDS)
+                ->whereIn('category_id', $catIds)
                 ->whereBetween('date_submitted', [$start, $end - 1])->count();
 
             $resolved = (int) $db->table('mantis_bug_history_table as h')
                 ->join('mantis_bug_table as b', 'b.id', '=', 'h.bug_id')
-                ->whereIn('b.category_id', self::QA_CATEGORY_IDS)
+                ->whereIn('b.category_id', $catIds)
                 ->where('h.field_name', 'status')
                 ->where('h.new_value', (string) self::STATUS_RESOLVED)
                 ->whereBetween('h.date_modified', [$start, $end - 1])->count();
 
             $reopened = (int) $db->table('mantis_bug_history_table as h')
                 ->join('mantis_bug_table as b', 'b.id', '=', 'h.bug_id')
-                ->whereIn('b.category_id', self::QA_CATEGORY_IDS)
+                ->whereIn('b.category_id', $catIds)
                 ->where('h.field_name', 'status')
                 ->whereIn('h.old_value', [(string) self::STATUS_RESOLVED, (string) self::STATUS_CLOSED])
                 ->whereNotIn('h.new_value', [(string) self::STATUS_RESOLVED, (string) self::STATUS_CLOSED])
