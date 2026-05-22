@@ -9,6 +9,11 @@ All notable changes to this project are documented in this file.
 - Redesign topbar with a darker "PowerBar" concept.
 - Build notification module and add topbar notifications dropdown (similar to settings) showing the latest 5 notifications.
 
+## [1.4.2] - 2026-05-21
+
+### Added
+- **Source filter on Defect Reporting** — top-level **All / External / Internal** pill filter above the tab bar applies across all tabs (Perubahan Harini, Defect Log, Ringkasan Harian, Analisis Kategori, Trend Harian). Categories with "(Internal)" in their name are grouped as Internal; all others as External. Switching the filter resets and reloads all tab data immediately. Backend `?source=all|internal|external` param added to all five defect endpoints (`dashboard`, `log`, `summary`, `categories`, `trend`).
+
 ## [1.4.1] - 2026-05-21
 
 ### Added

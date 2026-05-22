@@ -79,28 +79,32 @@ export type TrendRow = {
 
 export type ApiOk<T> = { data: T; meta?: Record<string, unknown> };
 
-export const fetchDefectDashboard = () =>
-  apiRequest<ApiOk<DashboardResponse>>("/api/defects/dashboard");
+export type CategorySource = "all" | "internal" | "external";
+
+export const fetchDefectDashboard = (source: CategorySource = "all") =>
+  apiRequest<ApiOk<DashboardResponse>>(`/api/defects/dashboard?source=${source}`);
 
 export const fetchDefectLog = (params: {
   page?: number; limit?: number; q?: string;
   tahap?: string[]; status?: string[];
+  source?: CategorySource;
 } = {}) => {
   const qs = new URLSearchParams();
   if (params.page) qs.set("page", String(params.page));
   if (params.limit) qs.set("limit", String(params.limit));
   if (params.q) qs.set("q", params.q);
+  if (params.source && params.source !== "all") qs.set("source", params.source);
   params.tahap?.forEach(t => qs.append("tahap[]", t));
   params.status?.forEach(s => qs.append("status[]", s));
   const suffix = qs.toString() ? `?${qs.toString()}` : "";
   return apiRequest<ApiOk<DefectLogRow[]>>(`/api/defects/log${suffix}`);
 };
 
-export const fetchDefectSummary = () =>
-  apiRequest<ApiOk<SummaryResponse>>("/api/defects/summary");
+export const fetchDefectSummary = (source: CategorySource = "all") =>
+  apiRequest<ApiOk<SummaryResponse>>(`/api/defects/summary?source=${source}`);
 
-export const fetchDefectCategories = () =>
-  apiRequest<ApiOk<CategoryRow[]>>("/api/defects/categories");
+export const fetchDefectCategories = (source: CategorySource = "all") =>
+  apiRequest<ApiOk<CategoryRow[]>>(`/api/defects/categories?source=${source}`);
 
-export const fetchDefectTrend = (days = 14) =>
-  apiRequest<ApiOk<TrendRow[]>>(`/api/defects/trend?days=${days}`);
+export const fetchDefectTrend = (days = 14, source: CategorySource = "all") =>
+  apiRequest<ApiOk<TrendRow[]>>(`/api/defects/trend?days=${days}&source=${source}`);
