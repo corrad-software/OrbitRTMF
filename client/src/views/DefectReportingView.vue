@@ -6,11 +6,19 @@ import {
   fetchDefectDashboard, fetchDefectLog, fetchDefectSummary,
   fetchDefectCategories, fetchDefectTrend,
   type DashboardResponse, type DefectLogRow,
-  type SummaryResponse, type CategoryRow, type TrendRow,
+  type SummaryResponse, type CategoryRow, type TrendRow, type CategorySource,
 } from "@/api/defects";
 
 type TabId = "dashboard" | "log" | "summary" | "category" | "trend" | "guide";
 const activeTab = ref<TabId>("dashboard");
+
+// ── Top-level source filter ───────────────────────────────────────────────
+const categorySource = ref<CategorySource>("all");
+const SOURCE_OPTIONS: { value: CategorySource; label: string }[] = [
+  { value: "all",      label: "All" },
+  { value: "external", label: "External" },
+  { value: "internal", label: "Internal" },
+];
 const tabs: { id: TabId; label: string }[] = [
   { id: "dashboard", label: "Perubahan Harini" },
   { id: "log",       label: "Defect Log" },
@@ -72,7 +80,7 @@ async function loadDashboard() {
   loading.value.dashboard = true;
   errors.value.dashboard = null;
   try {
-    const r = await fetchDefectDashboard();
+    const r = await fetchDefectDashboard(categorySource.value);
     dashboard.value = r.data;
     loaded.value.dashboard = true;
   } catch (e) {
@@ -92,6 +100,7 @@ async function loadLog() {
       page: logPage.value,
       tahap: logFilters.value.tahap,
       status: logFilters.value.status,
+      source: categorySource.value,
     });
     logRows.value = r.data;
     logTotal.value = (r.meta?.total as number) ?? r.data.length;
@@ -108,7 +117,7 @@ async function loadSummary() {
   loading.value.summary = true;
   errors.value.summary = null;
   try {
-    const r = await fetchDefectSummary();
+    const r = await fetchDefectSummary(categorySource.value);
     summary.value = r.data;
     loaded.value.summary = true;
   } catch (e) {
@@ -122,7 +131,7 @@ async function loadCategories() {
   loading.value.category = true;
   errors.value.category = null;
   try {
-    const r = await fetchDefectCategories();
+    const r = await fetchDefectCategories(categorySource.value);
     categories.value = r.data;
     loaded.value.category = true;
   } catch (e) {
@@ -136,7 +145,7 @@ async function loadTrend() {
   loading.value.trend = true;
   errors.value.trend = null;
   try {
-    const r = await fetchDefectTrend(trendDays.value);
+    const r = await fetchDefectTrend(trendDays.value, categorySource.value);
     trendRows.value = r.data;
     loaded.value.trend = true;
   } catch (e) {
@@ -150,6 +159,13 @@ async function loadTrend() {
 watch(activeTab, (t) => {
   if (!loaded.value[t]) ensureLoaded(t);
 }, { immediate: false });
+
+// Reload all tabs when source filter changes
+watch(categorySource, () => {
+  loaded.value = { dashboard: false, log: false, summary: false, category: false, trend: false, guide: true };
+  logPage.value = 1;
+  ensureLoaded(activeTab.value);
+});
 
 function ensureLoaded(t: TabId) {
   if (t === "dashboard") return loadDashboard();
@@ -295,6 +311,22 @@ function kpiValueClass(color: string) {
         >
           <RefreshCw class="h-3.5 w-3.5" :class="loading[activeTab] ? 'animate-spin' : ''" />
           Refresh
+        </button>
+      </div>
+
+      <!-- Source Filter -->
+      <div class="flex items-center gap-1.5">
+        <span class="text-xs font-medium text-slate-500">Sumber:</span>
+        <button
+          v-for="opt in SOURCE_OPTIONS"
+          :key="opt.value"
+          @click="categorySource = opt.value"
+          class="rounded-full px-3 py-1 text-xs font-medium transition-colors"
+          :class="categorySource === opt.value
+            ? 'bg-violet-600 text-white shadow-sm'
+            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'"
+        >
+          {{ opt.label }}
         </button>
       </div>
 
