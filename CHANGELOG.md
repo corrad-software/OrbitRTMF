@@ -9,6 +9,25 @@ All notable changes to this project are documented in this file.
 - Redesign topbar with a darker "PowerBar" concept.
 - Build notification module and add topbar notifications dropdown (similar to settings) showing the latest 5 notifications.
 
+## [1.4.4] - 2026-05-25
+
+### Added
+- **AIRA — AI Assistant** — Claude-powered chat assistant integrated into OrbitRTMF. Users with `ai.chat` permission can send messages and receive context-aware replies. Each interaction is logged (question, response, model, token counts, cost in USD) to `ai_chat_logs` for auditing and cost tracking.
+- **AI Settings page** (`/admin/settings/ai`) — admin panel with three tabs: **Key** (API key + enable/disable toggle), **Logs** (paginated chat history with search), and **Transactions** (cost breakdown per conversation). Accessible via the Settings → AI menu entry.
+- **AI permissions** — `ai.chat` (send messages), `ai_settings.view` (view logs/settings), `ai_settings.edit` (change config) added to `Permission` enum and exposed in the Roles editor.
+
+### Fixed
+- **Deleted page ID reuse** — confirmed that soft-deleted RTMF page spec IDs can be reused when creating a new page. The partial unique index (`WHERE deleted_at IS NULL`) and backend validation (`Rule::unique()->whereNull('deleted_at')`) are both correctly applied.
+
+## [1.4.3] - 2026-05-25
+
+### Fixed
+- **Textarea auto-resize on Business Requirement and Stakeholder Requirement fields** — both fields now use the `vAutoResize` directive so they expand to fit their content on load and while typing, instead of showing a fixed 3-row box that requires manual resize.
+- **Textarea auto-resize on Feedback comment fields** — each role's comment textarea now auto-expands to fit existing comment text when the Feedback tab loads.
+
+### Changed
+- **Settings → System Information** updated to reflect current stack: PHP `8.5.2`, PostgreSQL 17 (primary) + MantisBT MySQL (external defect DB), `xlsx 0.18.5` added, Docker/Coolify deployment noted, PHPUnit `12.5.14`, RBAC entry added to Security section, Database Models expanded to include all RTMF models (RtmfProject, RtmfModule, RtmfFrontend, RtmfScenario).
+
 ## [1.4.2] - 2026-05-21
 
 ### Added
