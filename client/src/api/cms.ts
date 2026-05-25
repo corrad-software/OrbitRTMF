@@ -18,6 +18,9 @@ import type {
   ExternalUser,
   UserDetail,
   UserInput,
+  AiChatLog,
+  AiTransaction,
+  AiSettings,
 } from "@/types";
 import type { AdminMenuPrefs } from "@/config/admin-menu";
 
@@ -227,4 +230,36 @@ export async function updateChangelog(content: string) {
 
 export async function listAllAttachments(params = "") {
   return apiRequest<{ data: AllAttachment[]; meta: Record<string, unknown> }>(`/api/admin/all-attachments${params}`);
+}
+
+// ── AI Chat ──────────────────────────────────────────────────────────────────
+
+export async function sendAiChat(message: string) {
+  return apiRequest<{ data: { reply: string } }>("/api/ai/chat", {
+    method: "POST",
+    body: JSON.stringify({ message }),
+  });
+}
+
+export async function getAiChatLogs(params = "") {
+  return apiRequest<{ data: AiChatLog[]; meta: Record<string, unknown> }>(`/api/ai/chat/logs${params}`);
+}
+
+export async function getAiTransactions(params = "") {
+  return apiRequest<{ data: AiTransaction[]; meta: Record<string, unknown> }>(`/api/ai/chat/transactions${params}`);
+}
+
+export async function getAiBalance() {
+  return apiRequest<{ data: { available: boolean; message?: string; data?: Record<string, unknown> } }>("/api/ai/chat/balance");
+}
+
+export async function getAiSettings() {
+  return apiRequest<{ data: AiSettings }>("/api/settings/ai");
+}
+
+export async function saveAiSettings(payload: { aiApiKey?: string; chatEnabled?: boolean }) {
+  return apiRequest<{ data: { success: boolean } }>("/api/settings/ai", {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
 }

@@ -958,11 +958,11 @@ onMounted(async () => {
           </div>
           <div class="space-y-1.5 md:col-span-2">
             <label class="text-sm font-medium text-slate-700">Business Requirement</label>
-            <textarea :readonly="!projectStore.canEdit" v-model="businessRequirement" rows="3" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200" />
+            <textarea v-auto-resize :readonly="!projectStore.canEdit" v-model="businessRequirement" style="min-height:4rem" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200" />
           </div>
           <div class="space-y-1.5 md:col-span-2">
             <label class="text-sm font-medium text-slate-700">Stakeholder Requirement <span class="text-xs font-normal text-slate-400">(URS)</span></label>
-            <textarea :readonly="!projectStore.canEdit" v-model="stakeholderRequirement" rows="3" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200" />
+            <textarea v-auto-resize :readonly="!projectStore.canEdit" v-model="stakeholderRequirement" style="min-height:4rem" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200" />
           </div>
         </div>
       </article>
@@ -1830,11 +1830,11 @@ onMounted(async () => {
                   <option value="reviewed">In Progress</option>
                   <option value="approved">Closed</option>
                 </select>
-                <textarea :readonly="!projectStore.canEdit"
+                <textarea v-auto-resize :readonly="!projectStore.canEdit"
                   :value="feedbackFor(roleDef.key).comment ?? ''"
                   :disabled="!canEditFeedbackRow(roleDef.key)"
                   @blur="canEditFeedbackRow(roleDef.key) && saveFeedback(roleDef.key, { comment: ($event.target as HTMLTextAreaElement).value || null })"
-                  rows="2"
+                  style="min-height:3.5rem"
                   class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 placeholder-slate-400 shadow-sm"
                   :class="canEditFeedbackRow(roleDef.key) ? 'bg-slate-50 focus:border-violet-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-violet-100' : 'bg-slate-50 cursor-not-allowed resize-none'"
                   :placeholder="canEditFeedbackRow(roleDef.key) ? 'Leave a comment…' : ''"
