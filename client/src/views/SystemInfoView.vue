@@ -27,6 +27,7 @@ const stack: StackGroup[] = [
       { name: "Vite", version: "8.0.1", description: "Frontend build tool and dev server (port 5180)" },
       { name: "Vue Router", version: "4.5.1", description: "Official router for Vue.js" },
       { name: "Pinia", version: "3.0.3", description: "State management for Vue" },
+      { name: "xlsx (SheetJS)", version: "0.18.5", description: "Client-side Excel parsing for bulk import" },
     ],
   },
   {
@@ -36,7 +37,7 @@ const stack: StackGroup[] = [
     items: [
       { name: "Tailwind CSS", version: "3.4.17", description: "Utility-first CSS framework" },
       { name: "PostCSS", version: "8.5.6", description: "CSS post-processor for build pipeline" },
-      { name: "Lucide Icons", version: "0.542", description: "Beautiful consistent icons" },
+      { name: "Lucide Icons", version: "0.542", description: "Beautiful consistent icon set" },
     ],
   },
   {
@@ -45,19 +46,22 @@ const stack: StackGroup[] = [
     color: { text: "text-blue-600" },
     items: [
       { name: "Laravel", version: "13.1.1", description: "PHP web framework and REST API" },
-      { name: "PHP", version: "^8.3", description: "Required runtime version from composer" },
+      { name: "PHP", version: "8.5.2", description: "Runtime version (requires ^8.4)" },
       { name: "Eloquent ORM", version: "13.x", description: "Laravel ORM for model/database access" },
-      { name: "Sanctum", version: "4.3.1", description: "Token/session authentication for SPA" },
+      { name: "Sanctum", version: "4.3.1", description: "Session-based SPA authentication" },
+      { name: "Laravel Pint", version: "1.29.0", description: "PHP code style formatter" },
+      { name: "Laravel Tinker", version: "3.x", description: "REPL for Laravel application" },
     ],
   },
   {
-    label: "Database & ORM",
+    label: "Database",
     icon: Database,
     color: { text: "text-emerald-600" },
     items: [
-      { name: "SQLite", version: "3", description: "Configured local database driver" },
-      { name: "Migrations", version: "Laravel 13", description: "Schema versioning with artisan" },
-      { name: "Seeders/Factories", version: "Laravel 13", description: "Deterministic test and fixture data" },
+      { name: "PostgreSQL", version: "17", description: "Primary application database (orbitrtmf)" },
+      { name: "MantisBT MySQL", version: "5.x", description: "External read-only defect tracker database" },
+      { name: "Migrations", version: "Laravel 13", description: "Schema versioning with artisan migrate" },
+      { name: "Seeders", version: "Laravel 13", description: "Role, user, setting, and category fixtures" },
     ],
   },
   {
@@ -65,10 +69,11 @@ const stack: StackGroup[] = [
     icon: Shield,
     color: { text: "text-amber-600" },
     items: [
-      { name: "Laravel Sanctum", version: "4.3.1", description: "SPA auth guard and token support" },
-      { name: "CSRF Middleware", version: "Laravel 13", description: "Built-in CSRF protection (PreventRequestForgery)" },
-      { name: "Throttle Middleware", version: "Laravel 13", description: "Rate limiting for auth/API routes" },
-      { name: "Password Hashing", version: "PHP bcrypt", description: "Secure password hashing primitives" },
+      { name: "Laravel Sanctum", version: "4.3.1", description: "SPA auth guard via session cookie" },
+      { name: "CSRF Middleware", version: "Laravel 13", description: "PreventRequestForgery via Sanctum" },
+      { name: "Throttle Middleware", version: "Laravel 13", description: "Rate limiting on auth and API routes" },
+      { name: "RBAC", version: "Custom", description: "Permission class + CheckPermission middleware with 6 roles" },
+      { name: "Password Hashing", version: "bcrypt", description: "Laravel hashed cast, 12 rounds in production" },
     ],
   },
   {
@@ -79,7 +84,8 @@ const stack: StackGroup[] = [
       { name: "Composer", version: "2.x", description: "PHP dependency management" },
       { name: "npm", version: "Scripts", description: "Runs dev/build pipeline for admin client" },
       { name: "Laravel Vite Plugin", version: "3.0", description: "Vite integration for Laravel apps" },
-      { name: "Laravel Pint", version: "1.29.0", description: "Code style tooling for PHP codebase" },
+      { name: "Docker", version: "Dockerfile", description: "Containerised deployment via Coolify" },
+      { name: "PHPUnit", version: "12.5.14", description: "Feature and unit test suite (orbitrtmf_test DB)" },
     ],
   },
 ];
@@ -106,21 +112,21 @@ const stack: StackGroup[] = [
                 <Globe class="h-4 w-4 text-violet-500" />
                 <p class="text-sm font-semibold text-slate-900">Frontend SPA</p>
               </div>
-              <p class="mt-1.5 text-xs text-slate-500">Vue 3 single-page application (TypeScript) built with Vite and served on port 5180.</p>
+              <p class="mt-1.5 text-xs text-slate-500">Vue 3 + TypeScript single-page application built with Vite, served on port 5180. State managed by Pinia; routing by Vue Router.</p>
             </div>
             <div class="rounded-lg border border-slate-200 p-3">
               <div class="flex items-center gap-2">
                 <Server class="h-4 w-4 text-blue-500" />
                 <p class="text-sm font-semibold text-slate-900">Laravel API</p>
               </div>
-              <p class="mt-1.5 text-xs text-slate-500">Laravel 13 backend with Eloquent ORM, Sanctum auth, middleware-based security, and JSON REST endpoints.</p>
+              <p class="mt-1.5 text-xs text-slate-500">Laravel 13 JSON REST API with Sanctum session auth, CamelCaseMiddleware, RBAC permission gates, and Eloquent ORM backed by PostgreSQL.</p>
             </div>
             <div class="rounded-lg border border-slate-200 p-3">
               <div class="flex items-center gap-2">
                 <Package class="h-4 w-4 text-teal-500" />
                 <p class="text-sm font-semibold text-slate-900">Hybrid Repository</p>
               </div>
-              <p class="mt-1.5 text-xs text-slate-500">Laravel application root with a dedicated `client/` Vue admin frontend and API controllers in `app/Http/Controllers/Api`.</p>
+              <p class="mt-1.5 text-xs text-slate-500">Laravel root with a <code class="rounded bg-slate-100 px-1 font-mono text-[11px]">client/</code> Vue admin frontend. API controllers in <code class="rounded bg-slate-100 px-1 font-mono text-[11px]">app/Http/Controllers/Api</code>. Deployed via Docker + Coolify.</p>
             </div>
           </div>
         </div>
@@ -145,7 +151,7 @@ const stack: StackGroup[] = [
         </article>
       </div>
 
-      <!-- ───── Database Schema ───── -->
+      <!-- ───── Database Models ───── -->
       <article class="rounded-lg border border-slate-200 bg-white shadow-sm">
         <div class="flex items-center gap-2 border-b border-slate-100 px-4 py-2.5">
           <Database class="h-4 w-4 text-emerald-600" />
@@ -154,14 +160,18 @@ const stack: StackGroup[] = [
         <div class="p-4">
           <div class="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <div v-for="model in [
-              { name: 'User', desc: 'Admin users with roles and credentials' },
-              { name: 'Role', desc: 'Role definitions for authorization policies' },
+              { name: 'User', desc: 'Admin users with roles, permissions, and photo' },
+              { name: 'Role', desc: 'Role definitions with permission arrays' },
               { name: 'Category', desc: 'Content taxonomy for organizing posts' },
               { name: 'Post', desc: 'Blog posts with draft/published/archived states' },
               { name: 'Page', desc: 'Static pages with publish workflow' },
               { name: 'Media', desc: 'Uploaded files with image metadata' },
               { name: 'Setting', desc: 'Key-value site configuration pairs' },
               { name: 'AuditLog', desc: 'Security and change tracking events' },
+              { name: 'RtmfProject', desc: 'RTMF projects with member roles' },
+              { name: 'RtmfModule', desc: 'Page catalog modules and sub-modules' },
+              { name: 'RtmfFrontend', desc: 'Page specs with items, scenarios, and feedback' },
+              { name: 'RtmfScenario', desc: 'Flow scenarios with steps and links' },
             ]" :key="model.name" class="rounded-lg border border-slate-200 px-3 py-2">
               <p class="text-sm font-medium text-slate-900">{{ model.name }}</p>
               <p class="mt-0.5 text-xs text-slate-400">{{ model.desc }}</p>
