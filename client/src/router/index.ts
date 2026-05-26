@@ -46,6 +46,7 @@ import QueueMonitorView from "@/views/QueueMonitorView.vue";
 import ComingSoonView from "@/views/ComingSoonView.vue";
 import RolesView from "@/views/RolesView.vue";
 import SettingsView from "@/views/SettingsView.vue";
+import AiSettingsView from "@/views/AiSettingsView.vue";
 import SystemInfoView from "@/views/SystemInfoView.vue";
 import UsersView from "@/views/UsersView.vue";
 import UserEditView from "@/views/UserEditView.vue";
@@ -192,6 +193,7 @@ const router = createRouter({
     // ── Administration ──
     { path: "/admin/administration/media-library", name: "admin-media-library", component: AdminMediaLibraryView, meta: { requiresAuth: true, requiresAdmin: true, title: "Media Library" } },
     { path: "/admin/settings", name: "settings", component: SettingsView, meta: { requiresAuth: true, title: "Settings" } },
+    { path: "/admin/settings/ai", name: "settings-ai", component: AiSettingsView, meta: { requiresAuth: true, title: "AI Settings" } },
     { path: "/admin/settings/system", name: "settings-system", component: SystemInfoView, meta: { requiresAuth: true, title: "System Info" } },
 
     // ── Core Platform: Identity & Access ──

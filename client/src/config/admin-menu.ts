@@ -137,6 +137,7 @@ export const DEFAULT_MENU: MenuGroupDef[] = [
         icon: Settings,
         children: [
           { id: "settings-general", label: "General", to: "/admin/settings" },
+          { id: "settings-ai", label: "AI", to: "/admin/settings/ai" },
           { id: "settings-system", label: "System", to: "/admin/settings/system" },
         ],
       },

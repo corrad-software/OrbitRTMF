@@ -60,6 +60,13 @@ class Permission
     // Audit
     const AUDIT_READ = 'audit.read';
 
+    // AI Chat
+    const AI_CHAT = 'ai.chat';
+
+    // AI Settings (admin-only)
+    const AI_SETTINGS_VIEW = 'ai_settings.view';
+    const AI_SETTINGS_EDIT = 'ai_settings.edit';
+
     // RTMF — broad gate (all RTMF users)
     const RTMF_VIEW = 'rtmf.view';
 
@@ -91,6 +98,8 @@ class Permission
             self::AUDIT_READ,
             self::RTMF_VIEW, self::RTMF_MANAGE,
             self::RTMF_CATALOG, self::RTMF_TOOLS, self::RTMF_TRACKER, self::RTMF_FEEDBACK,
+            self::AI_CHAT,
+            self::AI_SETTINGS_VIEW, self::AI_SETTINGS_EDIT,
         ];
     }
 }

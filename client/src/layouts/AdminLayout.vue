@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { Bell, Check, ChevronDown, FolderKanban, LogOut, MessageCircle, Send, Settings, Shield } from "lucide-vue-next";
+import { Bell, Check, ChevronDown, FolderKanban, Loader2, LogOut, MessageCircle, Send, Settings, Shield } from "lucide-vue-next";
+import { sendAiChat } from "@/api/cms";
 
 import type { ThemeColor } from "@/types";
 import type { MenuItemDef, MenuNode } from "@/config/admin-menu";
@@ -32,19 +33,35 @@ const settingsDropdownRef = ref<HTMLElement | null>(null);
 const chatOpen = ref(false);
 const chatDropdownRef = ref<HTMLElement | null>(null);
 const chatMessage = ref("");
-const chatMessages = ref<Array<{ id: number; from: "user" | "admin"; text: string; time: string }>>([]);
+const chatMessages = ref<Array<{ id: number; from: "user" | "ai"; text: string; time: string }>>([]);
+const chatLoading = ref(false);
 let chatIdCounter = 0;
 
-function sendChatMessage() {
+function nowTime() {
+  return new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+}
+
+async function sendChatMessage() {
   const text = chatMessage.value.trim();
-  if (!text) return;
-  chatMessages.value.push({
-    id: ++chatIdCounter,
-    from: "user",
-    text,
-    time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-  });
+  if (!text || chatLoading.value) return;
+
+  chatMessages.value.push({ id: ++chatIdCounter, from: "user", text, time: nowTime() });
   chatMessage.value = "";
+  chatLoading.value = true;
+
+  try {
+    const res = await sendAiChat(text);
+    const reply = res?.data?.reply ?? "No response";
+    chatMessages.value.push({ id: ++chatIdCounter, from: "ai", text: reply, time: nowTime() });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : "";
+    const display = msg.toLowerCase().includes("disabled")
+      ? "AI chat has been disabled by the administrator."
+      : "Sorry, I couldn't reach the AI service. Please try again.";
+    chatMessages.value.push({ id: ++chatIdCounter, from: "ai", text: display, time: nowTime() });
+  } finally {
+    chatLoading.value = false;
+  }
 }
 
 const themeChoices: Array<{ label: string; value: ThemeColor }> = [
@@ -347,13 +364,16 @@ watch(() => finalMenu.value, syncOpenMenus, { deep: true });
             class="absolute right-0 top-full z-50 mt-2 flex h-96 w-80 flex-col rounded-lg border border-slate-200 bg-white shadow-lg"
           >
             <div class="flex items-center justify-between border-b border-slate-200 px-4 py-2.5">
-              <p class="text-sm font-semibold text-slate-700">Chat</p>
+              <div>
+                <p class="text-sm font-semibold text-slate-700">AIRA <span class="text-[10px] font-normal text-slate-400">(beta)</span></p>
+              </div>
               <button class="text-slate-400 transition-colors hover:text-slate-600" @click="chatOpen = false">&times;</button>
             </div>
 
             <div class="flex-1 space-y-3 overflow-y-auto px-4 py-3">
-              <div v-if="chatMessages.length === 0" class="flex h-full items-center justify-center">
-                <p class="text-xs text-slate-400">No messages yet</p>
+              <div v-if="chatMessages.length === 0" class="flex h-full flex-col items-center justify-center gap-2">
+                <MessageCircle class="h-8 w-8 text-slate-200" />
+                <p class="text-xs text-slate-400">Ask anything about your Page Catalog data</p>
               </div>
               <div
                 v-for="msg in chatMessages"
@@ -365,8 +385,14 @@ watch(() => finalMenu.value, syncOpenMenus, { deep: true });
                   class="max-w-[75%] rounded-lg px-3 py-2 text-xs"
                   :class="msg.from === 'user' ? 'bg-[var(--accent-600)] text-white' : 'bg-slate-100 text-slate-700'"
                 >
-                  <p>{{ msg.text }}</p>
+                  <p class="whitespace-pre-wrap">{{ msg.text }}</p>
                   <p class="mt-1 text-[10px]" :class="msg.from === 'user' ? 'text-white/70' : 'text-slate-400'">{{ msg.time }}</p>
+                </div>
+              </div>
+              <div v-if="chatLoading" class="flex justify-start">
+                <div class="flex items-center gap-1.5 rounded-lg bg-slate-100 px-3 py-2">
+                  <Loader2 class="h-3 w-3 animate-spin text-slate-400" />
+                  <span class="text-xs text-slate-400">Thinking…</span>
                 </div>
               </div>
             </div>
@@ -381,10 +407,12 @@ watch(() => finalMenu.value, syncOpenMenus, { deep: true });
                   @keydown.enter="sendChatMessage"
                 />
                 <button
-                  class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-[var(--accent-600)] text-white transition-colors hover:bg-[var(--accent-700)]"
+                  class="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-[var(--accent-600)] text-white transition-colors hover:bg-[var(--accent-700)] disabled:opacity-50"
+                  :disabled="chatLoading"
                   @click="sendChatMessage"
                 >
-                  <Send class="h-3.5 w-3.5" />
+                  <Loader2 v-if="chatLoading" class="h-3.5 w-3.5 animate-spin" />
+                  <Send v-else class="h-3.5 w-3.5" />
                 </button>
               </div>
             </div>
