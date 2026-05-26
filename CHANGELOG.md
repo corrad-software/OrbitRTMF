@@ -9,6 +9,18 @@ All notable changes to this project are documented in this file.
 - Redesign topbar with a darker "PowerBar" concept.
 - Build notification module and add topbar notifications dropdown (similar to settings) showing the latest 5 notifications.
 
+## [1.4.5] - 2026-05-26
+
+### Added
+- **Developer tab on RTMF page editor** — new tab between Relations and Feedback with four panels: **Frontend Prompt** (tech-stack-agnostic page spec for UI generation), **Backend Prompt** (request fields, validation rules, and API endpoints for backend generation), **Data Model** (fields grouped by table with inferred types and required flag), and **Dev Checklist** (auto-generated task list from form items with colour-coded Field/Logic/Validation/Action categories and checkboxes). Environment links (Dev/Staging/Production) appear when URLs are set on the page.
+
+### Changed
+- **Feedback tab UX** — replaced auto-save-on-change behaviour with an explicit **Save button** per feedback row. Status and comment are now saved together in one action. Button turns green with a "Saved ✓" confirmation for 2 seconds after a successful save.
+
+### Fixed
+- **Feedback comment textarea** — QA and Developer role users could not type comments because the textarea was controlled via `:value` binding; any reactive update (e.g. status change) reset the typed text. Switched to local `v-model` state so in-progress input is never discarded.
+- **Dev Checklist checkbox alignment** — checkbox was misaligned with its label text due to `items-start` and an inline category badge inflating the line height. Changed to `items-center` with the badge pushed to the right edge.
+
 ## [1.4.4] - 2026-05-25
 
 ### Added

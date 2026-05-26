@@ -598,6 +598,26 @@ async function removeApiEndpoint(epId: number) {
 
 // ── Feedback state ──
 const feedbacks = ref<RtmfFrontendFeedback[]>([]);
+const feedbackComments = ref<Record<string, string>>({});
+const feedbackStatuses = ref<Record<string, RtmfFrontendFeedbackStatus>>({});
+const feedbackSaved = ref<Record<string, boolean>>({});
+
+function syncFeedbackComments() {
+  for (const roleDef of FEEDBACK_ROLES) {
+    const fb = feedbacks.value.find(f => f.role === roleDef.key);
+    feedbackComments.value[roleDef.key] = fb?.comment ?? '';
+    feedbackStatuses.value[roleDef.key] = (fb?.status ?? 'open') as RtmfFrontendFeedbackStatus;
+  }
+}
+
+async function submitFeedback(role: RtmfFrontendFeedbackRole) {
+  await saveFeedback(role, {
+    status: feedbackStatuses.value[role] as RtmfFrontendFeedbackStatus,
+    comment: feedbackComments.value[role] || null,
+  });
+  feedbackSaved.value[role] = true;
+  setTimeout(() => { feedbackSaved.value[role] = false; }, 2000);
+}
 
 const FEEDBACK_ROLES = [
   { key: 'business_analyst' as const, label: 'Business Analyst' },
@@ -622,7 +642,7 @@ function feedbackFor(role: RtmfFrontendFeedbackRole) {
 
 async function saveFeedback(role: RtmfFrontendFeedbackRole, patch: { status?: RtmfFrontendFeedbackStatus; comment?: string | null }) {
   const fb = feedbackFor(role);
-  const payload = { status: fb.status, comment: fb.comment, ...patch };
+  const payload = { status: fb.status, comment: fb.comment ?? null, ...patch };
   try {
     const res = await upsertRtmfFrontendFeedback(id.value, role, payload);
     const idx = feedbacks.value.findIndex(f => f.role === role);
@@ -1014,6 +1034,7 @@ onMounted(async () => {
   if (isEdit.value) {
     const fbRes = await listRtmfFrontendFeedbacks(id.value);
     feedbacks.value = fbRes.data;
+    syncFeedbackComments();
     const epRes = await listRtmfApiEndpoints(id.value);
     apiEndpoints.value = epRes.data;
     loadIncomingLinks();
@@ -2091,12 +2112,12 @@ onMounted(async () => {
               <label
                 v-for="(task, i) in devChecklist"
                 :key="i"
-                class="flex cursor-pointer items-start gap-3 px-4 py-2.5 hover:bg-slate-50 transition-colors"
+                class="flex cursor-pointer items-center gap-3 px-4 py-2.5 hover:bg-slate-50 transition-colors"
               >
-                <input type="checkbox" :checked="checkedTasks.has(i)" @change="toggleTask(i)" class="mt-0.5 h-3.5 w-3.5 shrink-0 rounded accent-violet-600" />
-                <div class="min-w-0">
-                  <span class="text-xs" :class="checkedTasks.has(i) ? 'line-through text-slate-300' : 'text-slate-700'">{{ task.label }}</span>
-                  <span class="ml-2 rounded-full px-1.5 py-0.5 text-[10px] font-medium"
+                <input type="checkbox" :checked="checkedTasks.has(i)" @change="toggleTask(i)" class="h-3.5 w-3.5 shrink-0 rounded accent-violet-600" />
+                <div class="flex min-w-0 flex-1 items-center gap-2">
+                  <span class="min-w-0 flex-1 text-xs" :class="checkedTasks.has(i) ? 'line-through text-slate-300' : 'text-slate-700'">{{ task.label }}</span>
+                  <span class="shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium"
                     :class="{
                       'bg-violet-50 text-violet-600': task.category === 'Field',
                       'bg-amber-50 text-amber-600': task.category === 'Logic',
@@ -2159,34 +2180,43 @@ onMounted(async () => {
               </div>
               <div class="flex-1 space-y-2">
                 <select
-                  :value="feedbackFor(roleDef.key).status"
+                  v-model="feedbackStatuses[roleDef.key]"
                   :disabled="!canEditFeedbackRow(roleDef.key)"
-                  @change="saveFeedback(roleDef.key, { status: ($event.target as HTMLSelectElement).value as RtmfFrontendFeedbackStatus })"
                   class="rounded-lg border px-3 py-1.5 text-sm font-medium shadow-sm transition-colors"
                   :class="{
                     'focus:outline-none focus:ring-2 focus:ring-violet-100 cursor-pointer': canEditFeedbackRow(roleDef.key),
                     'cursor-not-allowed': !canEditFeedbackRow(roleDef.key),
-                    'border-slate-200 bg-slate-50 text-slate-500': feedbackFor(roleDef.key).status === 'open',
-                    'border-amber-200 bg-amber-50 text-amber-700': feedbackFor(roleDef.key).status === 'reviewed',
-                    'border-emerald-200 bg-emerald-50 text-emerald-700': feedbackFor(roleDef.key).status === 'approved',
+                    'border-slate-200 bg-slate-50 text-slate-500': feedbackStatuses[roleDef.key] === 'open',
+                    'border-amber-200 bg-amber-50 text-amber-700': feedbackStatuses[roleDef.key] === 'reviewed',
+                    'border-emerald-200 bg-emerald-50 text-emerald-700': feedbackStatuses[roleDef.key] === 'approved',
                   }"
                 >
                   <option value="open">Open</option>
                   <option value="reviewed">In Progress</option>
                   <option value="approved">Closed</option>
                 </select>
-                <textarea v-auto-resize :readonly="!projectStore.canEdit"
-                  :value="feedbackFor(roleDef.key).comment ?? ''"
+                <textarea v-auto-resize :readonly="!canEditFeedbackRow(roleDef.key)"
+                  v-model="feedbackComments[roleDef.key]"
                   :disabled="!canEditFeedbackRow(roleDef.key)"
-                  @blur="canEditFeedbackRow(roleDef.key) && saveFeedback(roleDef.key, { comment: ($event.target as HTMLTextAreaElement).value || null })"
                   style="min-height:3.5rem"
                   class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 placeholder-slate-400 shadow-sm"
                   :class="canEditFeedbackRow(roleDef.key) ? 'bg-slate-50 focus:border-violet-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-violet-100' : 'bg-slate-50 cursor-not-allowed resize-none'"
                   :placeholder="canEditFeedbackRow(roleDef.key) ? 'Leave a comment…' : ''"
                 />
-                <p v-if="feedbackFor(roleDef.key).id" class="text-[10px] text-slate-400">
-                  Updated {{ formatFeedbackDate(feedbackFor(roleDef.key).updatedAt) }}
-                </p>
+                <div v-if="canEditFeedbackRow(roleDef.key)" class="flex items-center gap-2">
+                  <button
+                    @click="submitFeedback(roleDef.key)"
+                    class="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors"
+                    :class="feedbackSaved[roleDef.key] ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-900 text-white hover:bg-slate-700'"
+                  >
+                    <Check v-if="feedbackSaved[roleDef.key]" class="h-3.5 w-3.5" />
+                    <Save v-else class="h-3.5 w-3.5" />
+                    {{ feedbackSaved[roleDef.key] ? 'Saved' : 'Save' }}
+                  </button>
+                  <p v-if="feedbackFor(roleDef.key).id" class="text-[10px] text-slate-400">
+                    Updated {{ formatFeedbackDate(feedbackFor(roleDef.key).updatedAt) }}
+                  </p>
+                </div>
               </div>
             </div>
           </div>
