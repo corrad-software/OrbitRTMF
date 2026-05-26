@@ -318,9 +318,11 @@ const tabs = [
   { id: "transaction", label: "Transaction",  icon: ReceiptText },
   { id: "log",         label: "Log",          icon: ScrollText },
   { id: "balance",     label: "Balance",      icon: Wallet },
-];
+] as const;
 
-const activeTab = ref<"key" | "transaction" | "log" | "balance">("key");
+type TabId = (typeof tabs)[number]["id"];
+
+const activeTab = ref<TabId>("key");
 
 // ── Key tab ──────────────────────────────────────────────────────────────────
 const showKey    = ref(false);
