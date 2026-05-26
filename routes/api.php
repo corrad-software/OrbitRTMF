@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\AiChatController;
 use App\Http\Controllers\Api\AuditLogController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\CategoryController;
@@ -197,6 +198,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/dashboard/summary', [DashboardController::class, 'summary']);
 
     Route::get('/audit-logs', [AuditLogController::class, 'index']);
+
+    // AI Chat
+    Route::post('/ai/chat', [AiChatController::class, 'chat'])->middleware('permission:ai.chat');
+    Route::get('/ai/chat/logs', [AiChatController::class, 'logs'])->middleware('permission:ai_settings.view');
+    Route::get('/ai/chat/transactions', [AiChatController::class, 'transactions'])->middleware('permission:ai_settings.view');
+    Route::get('/ai/chat/balance', [AiChatController::class, 'balance'])->middleware('permission:ai_settings.view');
+    Route::get('/settings/ai', [AiChatController::class, 'getSettings'])->middleware('permission:ai_settings.view');
+    Route::put('/settings/ai', [AiChatController::class, 'saveSettings'])->middleware('permission:ai_settings.edit');
 
     Route::get('/developers-guide', [DevelopersGuideController::class, 'show']);
     Route::put('/developers-guide', [DevelopersGuideController::class, 'update']);

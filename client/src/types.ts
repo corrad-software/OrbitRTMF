@@ -633,3 +633,34 @@ export type RtmfRelationEdge = {
   toSpecId: string;
   toTitle: string;
 };
+
+// AI Chat
+export type AiChatLog = {
+  id: number;
+  userId: number;
+  user?: { id: number; name: string };
+  question: string;
+  response: string;
+  model: string;
+  inputTokens: number;
+  outputTokens: number;
+  costUsd: number;
+  createdAt: string;
+};
+
+export type AiTransaction = {
+  date: string;
+  messages: number;
+  inputTokens: number;
+  outputTokens: number;
+  costUsd: number;
+};
+
+export type AiSettings = {
+  aiApiKey: string;
+  hasKey: boolean;
+  model: string;
+  maxTokens: number;
+  chatEnabled: boolean;
+};
+

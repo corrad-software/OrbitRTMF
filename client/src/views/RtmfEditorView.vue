@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from "vue";
 import { RouterLink, useRoute, useRouter } from "vue-router";
-import { Cable, Paperclip, Trash2, LayoutGrid, Save, Upload, X, Plus, TableProperties, ExternalLink, Search, GripVertical, Layout, UserCheck, MessageSquare, CheckCircle2, Share2, Image } from "lucide-vue-next";
+import { Cable, Paperclip, Trash2, LayoutGrid, Save, Upload, X, Plus, TableProperties, ExternalLink, Search, GripVertical, Layout, UserCheck, MessageSquare, CheckCircle2, Share2, Image, Code2, Copy, Check, ClipboardList, Database, Link2 } from "lucide-vue-next";
 
 import AdminLayout from "@/layouts/AdminLayout.vue";
 import RichTextEditor from "@/components/RichTextEditor.vue";
@@ -550,7 +550,7 @@ function formatBytes(bytes: number) {
 }
 
 // ── Tab state ──
-const activeTab = ref<"frontend" | "api" | "mockup" | "relation" | "scenario" | "feedback">("frontend");
+const activeTab = ref<"frontend" | "api" | "mockup" | "relation" | "scenario" | "developer" | "feedback">("frontend");
 
 // ── API Endpoints ──
 const apiEndpoints = ref<RtmfFrontendApiEndpoint[]>([]);
@@ -598,6 +598,26 @@ async function removeApiEndpoint(epId: number) {
 
 // ── Feedback state ──
 const feedbacks = ref<RtmfFrontendFeedback[]>([]);
+const feedbackComments = ref<Record<string, string>>({});
+const feedbackStatuses = ref<Record<string, RtmfFrontendFeedbackStatus>>({});
+const feedbackSaved = ref<Record<string, boolean>>({});
+
+function syncFeedbackComments() {
+  for (const roleDef of FEEDBACK_ROLES) {
+    const fb = feedbacks.value.find(f => f.role === roleDef.key);
+    feedbackComments.value[roleDef.key] = fb?.comment ?? '';
+    feedbackStatuses.value[roleDef.key] = (fb?.status ?? 'open') as RtmfFrontendFeedbackStatus;
+  }
+}
+
+async function submitFeedback(role: RtmfFrontendFeedbackRole) {
+  await saveFeedback(role, {
+    status: feedbackStatuses.value[role] as RtmfFrontendFeedbackStatus,
+    comment: feedbackComments.value[role] || null,
+  });
+  feedbackSaved.value[role] = true;
+  setTimeout(() => { feedbackSaved.value[role] = false; }, 2000);
+}
 
 const FEEDBACK_ROLES = [
   { key: 'business_analyst' as const, label: 'Business Analyst' },
@@ -622,7 +642,7 @@ function feedbackFor(role: RtmfFrontendFeedbackRole) {
 
 async function saveFeedback(role: RtmfFrontendFeedbackRole, patch: { status?: RtmfFrontendFeedbackStatus; comment?: string | null }) {
   const fb = feedbackFor(role);
-  const payload = { status: fb.status, comment: fb.comment, ...patch };
+  const payload = { status: fb.status, comment: fb.comment ?? null, ...patch };
   try {
     const res = await upsertRtmfFrontendFeedback(id.value, role, payload);
     const idx = feedbacks.value.findIndex(f => f.role === role);
@@ -632,6 +652,202 @@ async function saveFeedback(role: RtmfFrontendFeedbackRole, patch: { status?: Rt
   } catch {
     toast.error("Failed to save feedback");
   }
+}
+
+// ── Developer tab ──
+const FIELD_TYPES = ['Input', 'Textarea', 'Select', 'Checkbox', 'Radio', 'DatePicker', 'FileUpload', 'Text'];
+const copiedFrontend = ref(false);
+const copiedBackend = ref(false);
+
+const currentModuleName = computed(() => modules.value.find(m => m.id === moduleId.value)?.name ?? '');
+const currentSubModuleName = computed(() => subModules.value.find(m => m.id === subModuleId.value)?.name ?? '');
+
+function buildFieldTable(rows: typeof items.value): string {
+  if (!rows.length) return '';
+  const lines: string[] = [
+    '| Label | Field Name | Type | Mandatory | Behaviour | Validation |',
+    '|-------|------------|------|-----------|-----------|------------|',
+  ];
+  for (const item of rows) {
+    const label = item.label ?? '—';
+    const field = item.tableFieldname ?? '—';
+    const type  = item.type ?? '—';
+    const mand  = item.mandatory ? 'Yes' : 'No';
+    const cond  = item.condition
+      ? (() => { try { const p = JSON.parse(item.condition!); return Array.isArray(p) ? p.map((x: { c: string }) => x.c).filter(Boolean).join(', ') : item.condition; } catch { return item.condition; } })()
+      : '—';
+    const val   = item.validation ?? '—';
+    lines.push(`| ${label} | ${field} | ${type} | ${mand} | ${cond} | ${val} |`);
+  }
+  return lines.join('\n');
+}
+
+const frontendPrompt = computed(() => {
+  const module = [currentModuleName.value, currentSubModuleName.value].filter(Boolean).join(' > ');
+  const sections: string[] = [];
+
+  sections.push(`## Page Specification: ${specId.value} — ${title.value}`);
+  if (module) sections.push(`Module: ${module}`);
+  sections.push('');
+
+  if (businessRequirement.value.trim()) {
+    sections.push('## Business Requirement');
+    sections.push(businessRequirement.value.trim());
+    sections.push('');
+  }
+
+  if (stakeholderRequirement.value.trim()) {
+    sections.push('## Stakeholder Requirement');
+    sections.push(stakeholderRequirement.value.trim());
+    sections.push('');
+  }
+
+  // Group items by tab
+  sections.push('## Form Layout');
+  let currentTab = 'General';
+  let tabRows: typeof items.value = [];
+
+  const flush = () => {
+    if (tabRows.length) {
+      sections.push(`\n### ${currentTab}`);
+      sections.push(buildFieldTable(tabRows));
+      tabRows = [];
+    }
+  };
+
+  for (const item of items.value) {
+    if (item.type === 'Tab') {
+      flush();
+      currentTab = item.label ?? 'Tab';
+    } else if (item.type === 'Header' || item.type === 'Divider') {
+      // skip structural non-fields
+    } else {
+      tabRows.push(item);
+    }
+  }
+  flush();
+
+  return sections.join('\n');
+});
+
+const backendPrompt = computed(() => {
+  const module = [currentModuleName.value, currentSubModuleName.value].filter(Boolean).join(' > ');
+  const sections: string[] = [];
+
+  sections.push(`## API Specification: ${specId.value} — ${title.value}`);
+  if (module) sections.push(`Module: ${module}`);
+  sections.push('');
+
+  if (businessRequirement.value.trim()) {
+    sections.push('## Business Context');
+    sections.push(businessRequirement.value.trim());
+    sections.push('');
+  }
+
+  // Derive request fields from form items that have a fieldname and validation
+  const fieldItems = items.value.filter(i => i.tableFieldname && FIELD_TYPES.includes(i.type ?? ''));
+  if (fieldItems.length) {
+    sections.push('## Request Fields');
+    sections.push('| Field Name | Mandatory | Validation |');
+    sections.push('|------------|-----------|------------|');
+    for (const item of fieldItems) {
+      const field = item.tableFieldname!;
+      const mand  = item.mandatory ? 'Yes' : 'No';
+      const val   = item.validation ?? '—';
+      sections.push(`| ${field} | ${mand} | ${val} |`);
+    }
+    sections.push('');
+  }
+
+  if (apiEndpoints.value.length) {
+    sections.push('## API Endpoints');
+    sections.push('| Method | Endpoint | Description |');
+    sections.push('|--------|----------|-------------|');
+    for (const ep of apiEndpoints.value) {
+      sections.push(`| ${ep.method} | ${ep.endpoint} | ${ep.description ?? '—'} |`);
+    }
+    sections.push('');
+  }
+
+  sections.push('## Expected Response');
+  sections.push('Return a success/failure status. On validation error, return field-level error messages.');
+
+  return sections.join('\n');
+});
+
+const dataModel = computed(() => {
+  const byTable = new Map<string, { field: string; type: string; mandatory: boolean }[]>();
+  for (const item of items.value) {
+    if (!item.tableFieldname) continue;
+    const raw = item.tableFieldname;
+    const dot = raw.indexOf('.');
+    const table = dot >= 0 ? raw.slice(0, dot) : 'unknown';
+    const field = dot >= 0 ? raw.slice(dot + 1) : raw;
+    const inferredType =
+      item.type === 'DatePicker' ? 'date' :
+      item.type === 'FileUpload' ? 'string (url)' :
+      item.type === 'Checkbox'   ? 'boolean' :
+      item.validation?.includes('numeric') ? 'integer/numeric' :
+      'string';
+    if (!byTable.has(table)) byTable.set(table, []);
+    const existing = byTable.get(table)!;
+    if (!existing.some(r => r.field === field)) {
+      existing.push({ field, type: inferredType, mandatory: item.mandatory ?? false });
+    }
+  }
+  return byTable;
+});
+
+const devChecklist = computed(() => {
+  const items_val = items.value;
+  const tasks: { label: string; category: string }[] = [];
+
+  // One task per editable field
+  for (const item of items_val) {
+    if (!FIELD_TYPES.includes(item.type ?? '')) continue;
+    const label = item.label ?? item.tableFieldname ?? item.type;
+    if (item.type === 'FileUpload') {
+      tasks.push({ label: `File upload — ${label}: implement upload, view, delete`, category: 'Field' });
+      const hasRestore = (() => { try { const c = JSON.parse(item.condition ?? '[]'); return JSON.stringify(c).toLowerCase().includes('restore'); } catch { return item.condition?.toLowerCase().includes('restore') ?? false; } })();
+      if (hasRestore) tasks.push({ label: `File upload — ${label}: implement restore (soft-delete flow)`, category: 'Field' });
+    } else {
+      const readOnly = (() => { try { const c = JSON.parse(item.condition ?? '[]'); return JSON.stringify(c).toLowerCase().includes('read only'); } catch { return item.condition?.toLowerCase().includes('read only') ?? false; } })();
+      tasks.push({ label: `${item.type} — ${label}${readOnly ? ' (read only)' : ''}${item.mandatory ? ' *' : ''}`, category: 'Field' });
+    }
+  }
+
+  // Conditional logic items
+  for (const item of items_val) {
+    if (!item.condition) continue;
+    const condText = (() => { try { const p = JSON.parse(item.condition); return Array.isArray(p) ? p.map((x: { c: string }) => x.c).filter(Boolean).join(', ') : item.condition; } catch { return item.condition; } })();
+    if (!condText || condText.toLowerCase() === 'read only') continue;
+    if (condText.toLowerCase().includes('if ') || condText.toLowerCase().includes('auto') || condText.toLowerCase().includes('trigger')) {
+      tasks.push({ label: `Conditional logic — "${item.label ?? item.type}": ${condText}`, category: 'Logic' });
+    }
+  }
+
+  // Validation tasks
+  const hasValidation = items_val.some(i => i.validation && i.validation.trim());
+  if (hasValidation) tasks.push({ label: 'Implement field-level validation on submit', category: 'Validation' });
+
+  // Submit / action
+  const hasSubmit = items_val.some(i => i.type === 'Button');
+  if (hasSubmit) tasks.push({ label: 'Implement submit action and handle API response', category: 'Action' });
+
+  return tasks;
+});
+
+const checkedTasks = ref<Set<number>>(new Set());
+function toggleTask(i: number) {
+  const s = new Set(checkedTasks.value);
+  s.has(i) ? s.delete(i) : s.add(i);
+  checkedTasks.value = s;
+}
+
+async function copyText(text: string, which: 'frontend' | 'backend') {
+  await navigator.clipboard.writeText(text);
+  if (which === 'frontend') { copiedFrontend.value = true; setTimeout(() => { copiedFrontend.value = false; }, 2000); }
+  else { copiedBackend.value = true; setTimeout(() => { copiedBackend.value = false; }, 2000); }
 }
 
 // ── Page relation diagram (built from conditionLines + incoming links API) ──
@@ -818,6 +1034,7 @@ onMounted(async () => {
   if (isEdit.value) {
     const fbRes = await listRtmfFrontendFeedbacks(id.value);
     feedbacks.value = fbRes.data;
+    syncFeedbackComments();
     const epRes = await listRtmfApiEndpoints(id.value);
     apiEndpoints.value = epRes.data;
     loadIncomingLinks();
@@ -886,6 +1103,15 @@ onMounted(async () => {
           <span v-if="relationNodes.length || incomingNodes.length" class="ml-1 rounded-full bg-slate-100 px-2 py-0.5 text-xs font-semibold text-slate-600">{{ relationNodes.length + incomingNodes.length }}</span>
         </button>
         <!-- Scenario tab hidden temporarily -->
+
+        <button
+          @click="activeTab = 'developer'"
+          class="flex items-center gap-2 border-b-2 px-5 py-2.5 text-sm font-medium transition-colors"
+          :class="activeTab === 'developer' ? 'border-violet-600 bg-white text-violet-700' : 'border-transparent text-slate-500 hover:bg-white hover:text-slate-700'"
+        >
+          <Code2 class="h-4 w-4" />
+          Developer
+        </button>
 
         <button
           @click="activeTab = 'feedback'"
@@ -958,11 +1184,11 @@ onMounted(async () => {
           </div>
           <div class="space-y-1.5 md:col-span-2">
             <label class="text-sm font-medium text-slate-700">Business Requirement</label>
-            <textarea :readonly="!projectStore.canEdit" v-model="businessRequirement" rows="3" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200" />
+            <textarea v-auto-resize :readonly="!projectStore.canEdit" v-model="businessRequirement" style="min-height:4rem" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200" />
           </div>
           <div class="space-y-1.5 md:col-span-2">
             <label class="text-sm font-medium text-slate-700">Stakeholder Requirement <span class="text-xs font-normal text-slate-400">(URS)</span></label>
-            <textarea :readonly="!projectStore.canEdit" v-model="stakeholderRequirement" rows="3" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200" />
+            <textarea v-auto-resize :readonly="!projectStore.canEdit" v-model="stakeholderRequirement" style="min-height:4rem" class="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm shadow-sm focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-200" />
           </div>
         </div>
       </article>
@@ -1794,6 +2020,146 @@ onMounted(async () => {
         </div>
       </article>
 
+      <!-- Developer tab (edit mode only) -->
+      <div v-if="isEdit" v-show="activeTab === 'developer'" class="space-y-4">
+
+        <!-- Prompt Export cards -->
+        <div class="grid gap-4 sm:grid-cols-2">
+          <!-- Frontend Prompt -->
+          <article class="rounded-lg border border-slate-200 bg-white shadow-sm">
+            <div class="flex items-center justify-between border-b border-slate-100 px-4 py-2.5">
+              <div class="flex items-center gap-2">
+                <Code2 class="h-4 w-4 text-violet-600" />
+                <h2 class="text-sm font-semibold text-slate-900">Frontend Prompt</h2>
+              </div>
+              <button
+                @click="copyText(frontendPrompt, 'frontend')"
+                class="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors"
+                :class="copiedFrontend ? 'bg-emerald-100 text-emerald-700' : 'bg-violet-50 text-violet-700 hover:bg-violet-100'"
+              >
+                <Check v-if="copiedFrontend" class="h-3.5 w-3.5" />
+                <Copy v-else class="h-3.5 w-3.5" />
+                {{ copiedFrontend ? 'Copied!' : 'Copy Prompt' }}
+              </button>
+            </div>
+            <div class="p-4">
+              <p class="text-xs text-slate-500">Full page spec — form fields, tabs, business rules, and conditions. Paste into any AI tool to generate the UI implementation.</p>
+              <pre class="mt-3 max-h-48 overflow-y-auto rounded-lg bg-slate-50 p-3 text-[11px] leading-relaxed text-slate-600 whitespace-pre-wrap">{{ frontendPrompt }}</pre>
+            </div>
+          </article>
+
+          <!-- Backend Prompt -->
+          <article class="rounded-lg border border-slate-200 bg-white shadow-sm">
+            <div class="flex items-center justify-between border-b border-slate-100 px-4 py-2.5">
+              <div class="flex items-center gap-2">
+                <Database class="h-4 w-4 text-blue-600" />
+                <h2 class="text-sm font-semibold text-slate-900">Backend Prompt</h2>
+              </div>
+              <button
+                @click="copyText(backendPrompt, 'backend')"
+                class="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors"
+                :class="copiedBackend ? 'bg-emerald-100 text-emerald-700' : 'bg-blue-50 text-blue-700 hover:bg-blue-100'"
+              >
+                <Check v-if="copiedBackend" class="h-3.5 w-3.5" />
+                <Copy v-else class="h-3.5 w-3.5" />
+                {{ copiedBackend ? 'Copied!' : 'Copy Prompt' }}
+              </button>
+            </div>
+            <div class="p-4">
+              <p class="text-xs text-slate-500">Request fields, validation rules, and API endpoints derived from the spec. Paste to generate controller, request class, or service layer.</p>
+              <pre class="mt-3 max-h-48 overflow-y-auto rounded-lg bg-slate-50 p-3 text-[11px] leading-relaxed text-slate-600 whitespace-pre-wrap">{{ backendPrompt }}</pre>
+            </div>
+          </article>
+        </div>
+
+        <!-- Data Model + Checklist row -->
+        <div class="grid gap-4 sm:grid-cols-2">
+
+          <!-- Data Model -->
+          <article class="rounded-lg border border-slate-200 bg-white shadow-sm">
+            <div class="flex items-center gap-2 border-b border-slate-100 px-4 py-2.5">
+              <Database class="h-4 w-4 text-emerald-600" />
+              <h2 class="text-sm font-semibold text-slate-900">Data Model</h2>
+              <span class="ml-auto rounded-full bg-slate-100 px-2 py-0.5 text-xs font-mono text-slate-500">{{ dataModel.size }} table{{ dataModel.size !== 1 ? 's' : '' }}</span>
+            </div>
+            <div class="divide-y divide-slate-50 p-4 space-y-3">
+              <div v-if="dataModel.size === 0" class="text-xs text-slate-400">No field names defined on this page yet.</div>
+              <div v-for="[table, fields] in dataModel" :key="table" class="space-y-1">
+                <p class="text-xs font-semibold text-slate-700 font-mono">{{ table }}</p>
+                <div class="rounded-lg border border-slate-100 overflow-hidden">
+                  <div class="grid grid-cols-[1fr_100px_60px] bg-slate-50 px-3 py-1 text-[10px] font-medium text-slate-400 uppercase tracking-wide">
+                    <span>Field</span><span>Type</span><span>Required</span>
+                  </div>
+                  <div v-for="f in fields" :key="f.field" class="grid grid-cols-[1fr_100px_60px] px-3 py-1.5 text-xs border-t border-slate-50">
+                    <span class="font-mono text-slate-700">{{ f.field }}</span>
+                    <span class="text-slate-400">{{ f.type }}</span>
+                    <span :class="f.mandatory ? 'text-rose-500 font-medium' : 'text-slate-300'">{{ f.mandatory ? 'Yes' : 'No' }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <!-- Dev Checklist -->
+          <article class="rounded-lg border border-slate-200 bg-white shadow-sm">
+            <div class="flex items-center gap-2 border-b border-slate-100 px-4 py-2.5">
+              <ClipboardList class="h-4 w-4 text-amber-600" />
+              <h2 class="text-sm font-semibold text-slate-900">Dev Checklist</h2>
+              <span class="ml-auto rounded-full bg-slate-100 px-2 py-0.5 text-xs font-mono text-slate-500">{{ checkedTasks.size }}/{{ devChecklist.length }}</span>
+            </div>
+            <div class="max-h-80 overflow-y-auto divide-y divide-slate-50">
+              <div v-if="devChecklist.length === 0" class="p-4 text-xs text-slate-400">No form fields on this page yet.</div>
+              <label
+                v-for="(task, i) in devChecklist"
+                :key="i"
+                class="flex cursor-pointer items-center gap-3 px-4 py-2.5 hover:bg-slate-50 transition-colors"
+              >
+                <input type="checkbox" :checked="checkedTasks.has(i)" @change="toggleTask(i)" class="h-3.5 w-3.5 shrink-0 rounded accent-violet-600" />
+                <div class="flex min-w-0 flex-1 items-center gap-2">
+                  <span class="min-w-0 flex-1 text-xs" :class="checkedTasks.has(i) ? 'line-through text-slate-300' : 'text-slate-700'">{{ task.label }}</span>
+                  <span class="shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium"
+                    :class="{
+                      'bg-violet-50 text-violet-600': task.category === 'Field',
+                      'bg-amber-50 text-amber-600': task.category === 'Logic',
+                      'bg-rose-50 text-rose-600': task.category === 'Validation',
+                      'bg-emerald-50 text-emerald-600': task.category === 'Action',
+                    }">{{ task.category }}</span>
+                </div>
+              </label>
+            </div>
+          </article>
+        </div>
+
+        <!-- Environment Links -->
+        <article v-if="urlDev || urlStg || urlPrd" class="rounded-lg border border-slate-200 bg-white shadow-sm">
+          <div class="flex items-center gap-2 border-b border-slate-100 px-4 py-2.5">
+            <Link2 class="h-4 w-4 text-teal-600" />
+            <h2 class="text-sm font-semibold text-slate-900">Environment Links</h2>
+          </div>
+          <div class="flex flex-wrap gap-3 p-4">
+            <a v-if="urlDev" :href="urlDev" target="_blank" rel="noopener"
+              class="flex items-center gap-2 rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-700 hover:border-violet-300 hover:text-violet-700 transition-colors">
+              <span class="h-2 w-2 rounded-full bg-emerald-400"></span>
+              Development
+              <ExternalLink class="h-3.5 w-3.5 text-slate-400" />
+            </a>
+            <a v-if="urlStg" :href="urlStg" target="_blank" rel="noopener"
+              class="flex items-center gap-2 rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-700 hover:border-violet-300 hover:text-violet-700 transition-colors">
+              <span class="h-2 w-2 rounded-full bg-amber-400"></span>
+              Staging
+              <ExternalLink class="h-3.5 w-3.5 text-slate-400" />
+            </a>
+            <a v-if="urlPrd" :href="urlPrd" target="_blank" rel="noopener"
+              class="flex items-center gap-2 rounded-lg border border-slate-200 px-4 py-2.5 text-sm font-medium text-slate-700 hover:border-violet-300 hover:text-violet-700 transition-colors">
+              <span class="h-2 w-2 rounded-full bg-blue-400"></span>
+              Production
+              <ExternalLink class="h-3.5 w-3.5 text-slate-400" />
+            </a>
+          </div>
+        </article>
+
+      </div>
+
       <!-- Feedback (edit mode only) -->
       <article v-if="isEdit" v-show="activeTab === 'feedback'" class="rounded-lg border border-slate-200 bg-white shadow-sm">
         <div class="flex items-center gap-2 border-b border-slate-100 px-4 py-2.5">
@@ -1814,34 +2180,43 @@ onMounted(async () => {
               </div>
               <div class="flex-1 space-y-2">
                 <select
-                  :value="feedbackFor(roleDef.key).status"
+                  v-model="feedbackStatuses[roleDef.key]"
                   :disabled="!canEditFeedbackRow(roleDef.key)"
-                  @change="saveFeedback(roleDef.key, { status: ($event.target as HTMLSelectElement).value as RtmfFrontendFeedbackStatus })"
                   class="rounded-lg border px-3 py-1.5 text-sm font-medium shadow-sm transition-colors"
                   :class="{
                     'focus:outline-none focus:ring-2 focus:ring-violet-100 cursor-pointer': canEditFeedbackRow(roleDef.key),
                     'cursor-not-allowed': !canEditFeedbackRow(roleDef.key),
-                    'border-slate-200 bg-slate-50 text-slate-500': feedbackFor(roleDef.key).status === 'open',
-                    'border-amber-200 bg-amber-50 text-amber-700': feedbackFor(roleDef.key).status === 'reviewed',
-                    'border-emerald-200 bg-emerald-50 text-emerald-700': feedbackFor(roleDef.key).status === 'approved',
+                    'border-slate-200 bg-slate-50 text-slate-500': feedbackStatuses[roleDef.key] === 'open',
+                    'border-amber-200 bg-amber-50 text-amber-700': feedbackStatuses[roleDef.key] === 'reviewed',
+                    'border-emerald-200 bg-emerald-50 text-emerald-700': feedbackStatuses[roleDef.key] === 'approved',
                   }"
                 >
                   <option value="open">Open</option>
                   <option value="reviewed">In Progress</option>
                   <option value="approved">Closed</option>
                 </select>
-                <textarea :readonly="!projectStore.canEdit"
-                  :value="feedbackFor(roleDef.key).comment ?? ''"
+                <textarea v-auto-resize :readonly="!canEditFeedbackRow(roleDef.key)"
+                  v-model="feedbackComments[roleDef.key]"
                   :disabled="!canEditFeedbackRow(roleDef.key)"
-                  @blur="canEditFeedbackRow(roleDef.key) && saveFeedback(roleDef.key, { comment: ($event.target as HTMLTextAreaElement).value || null })"
-                  rows="2"
+                  style="min-height:3.5rem"
                   class="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 placeholder-slate-400 shadow-sm"
                   :class="canEditFeedbackRow(roleDef.key) ? 'bg-slate-50 focus:border-violet-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-violet-100' : 'bg-slate-50 cursor-not-allowed resize-none'"
                   :placeholder="canEditFeedbackRow(roleDef.key) ? 'Leave a comment…' : ''"
                 />
-                <p v-if="feedbackFor(roleDef.key).id" class="text-[10px] text-slate-400">
-                  Updated {{ formatFeedbackDate(feedbackFor(roleDef.key).updatedAt) }}
-                </p>
+                <div v-if="canEditFeedbackRow(roleDef.key)" class="flex items-center gap-2">
+                  <button
+                    @click="submitFeedback(roleDef.key)"
+                    class="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors"
+                    :class="feedbackSaved[roleDef.key] ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-900 text-white hover:bg-slate-700'"
+                  >
+                    <Check v-if="feedbackSaved[roleDef.key]" class="h-3.5 w-3.5" />
+                    <Save v-else class="h-3.5 w-3.5" />
+                    {{ feedbackSaved[roleDef.key] ? 'Saved' : 'Save' }}
+                  </button>
+                  <p v-if="feedbackFor(roleDef.key).id" class="text-[10px] text-slate-400">
+                    Updated {{ formatFeedbackDate(feedbackFor(roleDef.key).updatedAt) }}
+                  </p>
+                </div>
               </div>
             </div>
           </div>
