@@ -313,16 +313,16 @@ import type { AiChatLog, AiTransaction } from "@/types";
 
 const toast = useToast();
 
-type AiSettingsTab = "key" | "transaction" | "log" | "balance";
-
-const tabs: { id: AiSettingsTab; label: string; icon: typeof Key }[] = [
+const tabs = [
   { id: "key",         label: "Key",         icon: Key },
   { id: "transaction", label: "Transaction",  icon: ReceiptText },
   { id: "log",         label: "Log",          icon: ScrollText },
   { id: "balance",     label: "Balance",      icon: Wallet },
-];
+] as const;
 
-const activeTab = ref<AiSettingsTab>("key");
+type TabId = (typeof tabs)[number]["id"];
+
+const activeTab = ref<TabId>("key");
 
 // ── Key tab ──────────────────────────────────────────────────────────────────
 const showKey    = ref(false);
