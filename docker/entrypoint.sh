@@ -3,11 +3,11 @@ set -e
 cd /var/www/html
 
 # Auto-generate .env from Docker environment variables if not exists
-if [ ! -f .env ]; then
-  printenv | grep -v "^_\|^HOSTNAME\|^HOME\|^PATH\|^PWD\|^SHLVL\|^TERM" \
-    > .env
-  echo ".env generated from environment variables"
-fi
+#if [ ! -f .env ]; then
+#  printenv | grep -v "^_\|^HOSTNAME\|^HOME\|^PATH\|^PWD\|^SHLVL\|^TERM" \
+#    > .env
+# echo ".env generated from environment variables"
+#fi
 
 # Writable dirs (volumes / first boot)
 chown -R www-data:www-data storage bootstrap/cache 2>/dev/null || true
